@@ -43,6 +43,10 @@ export interface SettingState {
     language: string | null // 当前系统语言
     themeColor: string // 主题颜色
     themeColorName: string // 主题颜色名称
+    wallpaper: string | null // 壁纸图片路径
+    wallpaperType: 'preset' | 'custom' | 'none' // 壁纸类型：预设、自定义、无
+    wallpaperOpacity: number // 壁纸透明度
+    wallpaperBlur: number // 壁纸模糊度
 }
 
 /* ChatState */

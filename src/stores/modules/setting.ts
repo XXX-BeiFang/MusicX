@@ -16,40 +16,61 @@ export const settingStore = defineStore({
         // 主题颜色
         themeColor: '#8b5cf6', // 默认紫色
         themeColorName: '默认紫',
+        // 壁纸设置
+        wallpaper: null,
+        wallpaperType: 'none',
+        wallpaperOpacity: 0.8,
+        wallpaperBlur: 0, // 默认无模糊
     }),
     actions: {
         // Set SettingState
         setSettingState(...args: ObjToKeyValArray<SettingState>) {
             this.$patch({ [args[0]]: args[1] } as Record<string, any>);
         },
-        
+
         // 设置主题颜色
         setThemeColor(color: string, name: string) {
             this.themeColor = color;
             this.themeColorName = name;
-            
+
             // 设置 CSS 变量
             document.documentElement.style.setProperty('--primary', color);
-            
+
             // 转换为 RGB 格式并设置
             const hexToRgb = (hex: string) => {
                 // 移除 # 号
                 hex = hex.replace('#', '');
-                
+
                 // 处理缩写形式（例如 #fff）
                 if (hex.length === 3) {
                     hex = hex.split('').map(h => h + h).join('');
                 }
-                
+
                 // 转换为 RGB
                 const r = parseInt(hex.substring(0, 2), 16);
                 const g = parseInt(hex.substring(2, 4), 16);
                 const b = parseInt(hex.substring(4, 6), 16);
-                
+
                 return `${r}, ${g}, ${b}`;
             };
-            
+
             document.documentElement.style.setProperty('--primary-rgb', hexToRgb(color));
+        },
+
+        // 设置壁纸
+        setWallpaper(wallpaper: string | null, type: 'preset' | 'custom' | 'none') {
+            this.wallpaper = wallpaper;
+            this.wallpaperType = type;
+        },
+
+        // 设置壁纸透明度
+        setWallpaperOpacity(opacity: number) {
+            this.wallpaperOpacity = opacity;
+        },
+
+        // 设置壁纸模糊度
+        setWallpaperBlur(blur: number) {
+            this.wallpaperBlur = blur;
         }
     },
     persist: piniaPersistConfig('settingStore'),

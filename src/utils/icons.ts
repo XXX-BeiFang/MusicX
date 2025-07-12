@@ -64,5 +64,5 @@ export const iconConfig = {
   sizeMedium: 18,
   sizeLarge: 24,
   // 默认样式
-  defaultClass: 'text-purple-600'
+  defaultClass: 'text-primary'
 } 

@@ -9,6 +9,19 @@ html.dark {
     --el-fill-color-blank: hsl(var(--background));
 }
 
+/* Element Plus 滑块组件样式 */
+.el-slider__runway {
+  --el-slider-main-bg-color: var(--primary);
+}
+
+.el-slider__bar {
+  background-color: var(--primary);
+}
+
+.el-slider__button {
+  border-color: var(--primary);
+}
+
 /*下拉框*/
 .el-select__wrapper{
     @apply p-4 py-3 rounded-md

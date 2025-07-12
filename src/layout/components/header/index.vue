@@ -2,6 +2,7 @@
 import { Icon } from '@iconify/vue'
 import * as Avatar from './components/avatar.vue'
 import { ref, onMounted } from 'vue'
+import * as ThemeSelector from '@/components/ThemeSelector.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -66,6 +67,8 @@ onMounted(() => {
           @keyup.enter="router.push('/search?query=' + searchText)"
         />
       </div>
+      <!-- 主题选择器 -->
+      <ThemeSelector.default />
       <el-button text circle @click="toggleTheme">
         <Icon :icon="isDark ? 'mdi:weather-sunny' : 'mdi:weather-night'" class="theme-icon" />
       </el-button>

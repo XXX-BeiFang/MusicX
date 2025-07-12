@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './routers/index'
 import Store from "@/stores";
+import { settingStore } from '@/stores/modules/setting';
 import i18n from "@/i18n/i18n";
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
@@ -31,3 +32,9 @@ app.use(i18n)
 // ElementPlus
 app.use(ElementPlus)
 app.mount('#app')
+
+// 应用保存的主题颜色
+const settings = settingStore();
+if (settings.themeColor) {
+  document.documentElement.style.setProperty('--primary', settings.themeColor);
+}

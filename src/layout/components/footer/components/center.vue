@@ -17,27 +17,26 @@ const {
     <div class="flex items-center mr-2">
       <button
         @click="prevTrack"
-        class="p-2 rounded-full hover:bg-hoverMenuBg transition"
+        class="w-10 h-10 rounded-full hover:bg-hoverMenuBg transition flex items-center justify-center"
       >
-        <Icon name="Back" :size="18" class="text-purple-600" />
+        <Icon name="Back" :size="18" class="text-primary" />
       </button>
       <button
         @click="togglePlayPause"
-        class="p-2 rounded-full hover:bg-hoverMenuBg transition"
+        class="w-10 h-10 rounded-full hover:bg-hoverMenuBg transition flex items-center justify-center"
       >
-        <Icon
-          :name="isPlaying ? 'VideoPause' : 'Play'"
-          :size="24"
-          class="text-purple-600"
-        />
+        <el-icon class="text-primary" :size="20">
+          <video-play v-if="!isPlaying" />
+          <video-pause v-else />
+        </el-icon>
       </button>
       <button
         @click="nextTrack"
-        class="p-2 rounded-full hover:bg-hoverMenuBg transition"
+        class="w-10 h-10 rounded-full hover:bg-hoverMenuBg transition flex items-center justify-center"
       >
-        <Icon name="Right" :size="18" class="text-purple-600" />
+        <Icon name="Right" :size="18" class="text-primary" />
       </button>
-      <button class="p-2 rounded-full hover:bg-hoverMenuBg transition">
+      <button class="w-10 h-10 rounded-full hover:bg-hoverMenuBg transition flex items-center justify-center">
         <Icon name="Star" :size="18" color="#ef4444" />
       </button>
     </div>

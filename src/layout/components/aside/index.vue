@@ -34,12 +34,12 @@ watch(
           {{ item.title }}
         </h3>
         <router-link
-          class="rounded-lg w-full transition text-sm duration-300 py-2 px-2 flex items-center space-x-2 text-primary-foreground hover:bg-hoverMenuBg"
+          class="rounded-lg w-full transition text-sm duration-300 py-2 px-2 flex items-center space-x-2 text-primary-foreground hover:bg-gray-100/30 dark:hover:bg-gray-700/30 hover:shadow-sm transform hover:translate-x-1"
           :to="item2.router"
           v-for="(item2, index2) in item.children"
           :key="index2"
         >
-          <Icon :name="item2.icon" :size="18" class="text-purple-600" />
+          <Icon :name="item2.icon" :size="18" class="text-primary" />
           <span>{{ item2.title }}</span>
         </router-link>
       </div>
@@ -53,7 +53,7 @@ watch(
           <router-link
             v-for="item in userPlay"
             :key="item.id"
-            class="rounded-lg w-full transition text-sm duration-300 py-2 px-2 flex items-center space-x-2 text-primary-foreground hover:bg-hoverMenuBg"
+            class="rounded-lg w-full transition text-sm duration-300 py-2 px-2 flex items-center space-x-2 text-primary-foreground hover:bg-gray-100/30 dark:hover:bg-gray-700/30 hover:shadow-sm transform hover:translate-x-1"
             :to="`/playlist/${item.id}`"
           >
             <el-image

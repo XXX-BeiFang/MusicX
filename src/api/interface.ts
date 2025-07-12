@@ -21,6 +21,21 @@ export namespace API {
         result: T;
     }
 
+    // 推荐歌单接口
+    export interface RecommendPlaylist {
+        id: number;
+        type: number;
+        name: string;
+        copywriter: string;
+        picUrl: string;
+        canDislike: boolean;
+        trackNumberUpdateTime: number;
+        playCount: number;
+        trackCount: number;
+        highQuality: boolean;
+        alg: string;
+    }
+
     // 歌曲实体类型
     export interface Song {
         name: string;

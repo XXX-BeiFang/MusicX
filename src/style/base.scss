@@ -6,6 +6,13 @@ body,
   font-family: 'hanyi', sans-serif !important;
 }
 
+:root {
+  --primary: #8b5cf6; /* 默认紫色 */
+  --primary-rgb: 139, 92, 246; /* RGB 格式 */
+  --primary-hover: #7c3aed;
+  --primary-light: rgba(139, 92, 246, 0.2);
+}
+
 html.light body {
   background: #f8fafc;
   position: relative;
@@ -66,4 +73,48 @@ pre.hljs {
       width: 6px;
     }
   }
+}
+
+/* 主题相关样式 */
+.text-primary {
+  color: var(--primary) !important;
+}
+
+.bg-primary {
+  background-color: var(--primary) !important;
+}
+
+.border-primary {
+  border-color: var(--primary) !important;
+}
+
+.hover\:text-primary:hover {
+  color: var(--primary) !important;
+}
+
+.hover\:bg-primary:hover {
+  background-color: var(--primary) !important;
+}
+
+.hover\:border-primary:hover {
+  border-color: var(--primary) !important;
+}
+
+.ring-primary {
+  --tw-ring-color: var(--primary) !important;
+}
+
+/* 排行榜前三名颜色 */
+.text-primary {
+  color: var(--primary) !important;
+}
+
+/* 主题渐变背景 */
+.theme-gradient {
+  background: linear-gradient(to bottom right, var(--primary), color-mix(in srgb, var(--primary) 70%, #4338ca));
+}
+
+/* 主题阴影 */
+.hover\:shadow-primary:hover {
+  box-shadow: 0 4px 14px rgba(var(--primary-rgb), 0.25) !important;
 }

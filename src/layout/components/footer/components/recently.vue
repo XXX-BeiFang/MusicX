@@ -29,8 +29,8 @@ const handleClearAll = () => {
   >
     <template #reference>
       <div class="flex items-center">
-        <button class="p-2 rounded-full hover:bg-hoverMenuBg transition w-9">
-          <Icon name="List" :size="7" class="text-purple-600" />
+        <button class="w-10 h-10 rounded-full hover:bg-hoverMenuBg transition flex items-center justify-center">
+          <Icon name="List" :size="18" class="text-primary" />
         </button>
       </div>
     </template>
@@ -38,10 +38,10 @@ const handleClearAll = () => {
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm text-gray-400">最近播放</span>
         <button
-          class="p-2 rounded-full hover:bg-hoverMenuBg transition"
+          class="w-8 h-8 rounded-full hover:bg-hoverMenuBg transition flex items-center justify-center"
           @click="handleClearAll"
         >
-          <Icon name="Delete" :size="7" class="text-gray-500" />
+          <Icon name="Delete" :size="16" class="text-gray-500" />
         </button>
       </div>
       <div class="flex flex-col">
@@ -72,7 +72,7 @@ const handleClearAll = () => {
               circle
               @click="audio.deleteTrack(item.id)"
             >
-              <Icon name="Delete" :size="7" class="text-gray-500" />
+              <Icon name="Delete" :size="16" class="text-gray-500" />
             </el-button>
           </div>
         </el-scrollbar>

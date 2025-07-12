@@ -31,6 +31,14 @@ export const cloudsearch = <T>({
   })
 }
 
+// 获取推荐歌单
+export const personalized = (params: { limit?: number } = {}) => {
+  const query = createQueryString({
+    limit: params.limit || 30
+  })
+  return httpGet<API.ResultRes<API.RecommendPlaylist[]>>(`/personalized?${query}`)
+}
+
 // 获取音乐连接
 export const urlV1 = (id: number | string) => {
   const audio = AudioStore()

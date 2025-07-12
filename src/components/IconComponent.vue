@@ -36,6 +36,10 @@ const handleClick = (event: MouseEvent) => {
 
 // 计算最终颜色
 const finalColor = computed(() => {
+  // 如果使用text-primary类，则不应该设置内联颜色样式
+  if (props.customClass?.includes('text-primary') || (!props.customClass && iconConfig.defaultClass.includes('text-primary'))) {
+    return ''
+  }
   return props.color || ''
 })
 
@@ -78,5 +82,10 @@ const iconStyle = computed(() => {
   width: 100% !important;
   height: 100% !important;
   display: block;
+}
+
+/* 确保text-primary类能够正确应用主题颜色 */
+:deep(.text-primary) {
+  color: var(--primary) !important;
 }
 </style> 

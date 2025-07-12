@@ -41,6 +41,8 @@ export interface SettingState {
     isRomaParsed: boolean // 是否解析罗马音
     isTranslatedParsed: boolean // 是否解析翻译
     language: string | null // 当前系统语言
+    themeColor: string // 主题颜色
+    themeColorName: string // 主题颜色名称
 }
 
 /* ChatState */

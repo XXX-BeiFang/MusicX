@@ -1,0 +1,95 @@
+@startuml 音乐网站组件图
+
+skinparam componentStyle rectangle
+skinparam component {
+  BorderColor #3498db
+  BackgroundColor #ecf0f1
+  ArrowColor #34495e
+  FontColor #2c3e50
+}
+
+package "前端应用" {
+  [Vue应用] as App
+  
+  package "核心组件" {
+    [音乐播放器] as Player
+    [登录组件] as Login
+    [歌单组件] as Playlist
+    [搜索组件] as Search
+    [艺术家组件] as Artist
+    [MV播放器] as MV
+    [设置组件] as Settings
+    [AI聊天组件] as ChatGPT
+  }
+  
+  package "状态管理" {
+    [用户状态] as UserStore
+    [音频状态] as AudioStore
+    [设置状态] as SettingStore
+    [菜单状态] as MenuStore
+    [聊天状态] as ChatStore
+  }
+  
+  package "工具函数" {
+    [HTTP请求] as HTTP
+    [日期工具] as DateUtils
+    [歌词解析] as LyricParser
+    [Markdown解析] as MarkdownParser
+  }
+  
+  package "路由" {
+    [Vue Router] as Router
+  }
+}
+
+package "API服务" {
+  [网易云音乐API] as NetEaseAPI
+  [登录服务] as LoginService
+  [音乐服务] as MusicService
+  [用户服务] as UserService
+  [搜索服务] as SearchService
+  [歌单服务] as PlaylistService
+  [艺术家服务] as ArtistService
+  [MV服务] as MVService
+}
+
+package "外部服务" {
+  [ChatGPT API] as ChatGPTAPI
+}
+
+' 前端组件关系
+App --> Router
+Router --> Player
+Router --> Login
+Router --> Playlist
+Router --> Search
+Router --> Artist
+Router --> MV
+Router --> Settings
+Router --> ChatGPT
+
+' 状态管理关系
+Player --> AudioStore
+Login --> UserStore
+Settings --> SettingStore
+ChatGPT --> ChatStore
+
+' 工具函数关系
+Player --> LyricParser
+ChatGPT --> MarkdownParser
+App --> HTTP
+
+' API服务关系
+HTTP --> NetEaseAPI
+NetEaseAPI --> LoginService
+NetEaseAPI --> MusicService
+NetEaseAPI --> UserService
+NetEaseAPI --> SearchService
+NetEaseAPI --> PlaylistService
+NetEaseAPI --> ArtistService
+NetEaseAPI --> MVService
+
+' 外部服务关系
+ChatGPT --> ChatGPTAPI
+
+@enduml

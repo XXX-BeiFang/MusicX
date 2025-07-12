@@ -1,0 +1,186 @@
+<script setup lang="ts">
+import { Icon } from '@iconify/vue'
+import * as Avatar from './components/avatar.vue'
+import { ref, onMounted } from 'vue'
+
+const route = useRoute()
+const router = useRouter()
+
+const searchText = ref('')
+const isDark = ref(false)
+
+// 赋值到搜索框
+watch(
+  () => route.query,
+  (newValue) => {
+    if (newValue.query) {
+      searchText.value = newValue.query as string
+    }
+  },
+  { immediate: true }
+)
+
+const toggleTheme = () => {
+  isDark.value = !isDark.value
+  document.documentElement.classList.toggle('dark', isDark.value)
+  // 可选：本地存储用户选择
+  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+}
+
+onMounted(() => {
+  // 初始化时根据本地存储或当前 class 设置
+  const saved = localStorage.getItem('theme')
+  if (saved) {
+    isDark.value = saved === 'dark'
+    document.documentElement.classList.toggle('dark', isDark.value)
+  } else {
+    isDark.value = document.documentElement.classList.contains('dark')
+  }
+})
+</script>
+<template>
+  <header class="px-4 py-2 border-b flex items-center">
+    <div class="flex relative w-60">
+      <button class="btn btn1" />
+      <button class="btn btn2" />
+      <button class="btn btn3" />
+    </div>
+    <el-button text circle @click="router.back()">
+      <Icon icon="material-symbols:arrow-back-ios" />
+    </el-button>
+    <el-button text circle @click="router.forward()">
+      <Icon icon="material-symbols:arrow-forward-ios" />
+    </el-button>
+    <!-- 输入框和头像 -->
+    <div class="ml-auto flex items-center gap-3">
+      <div class="relative mr-6">
+        <Icon
+          icon="mdi:magnify"
+          class="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-500"
+        />
+        <input
+          v-model="searchText"
+          type="text"
+          class="w-64 text-sm pl-8 pr-2 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 focus:w-80"
+          placeholder="搜索..."
+          @keyup.enter="router.push('/search?query=' + searchText)"
+        />
+      </div>
+      <el-button text circle @click="toggleTheme">
+        <Icon :icon="isDark ? 'mdi:weather-sunny' : 'mdi:weather-night'" class="theme-icon" />
+      </el-button>
+      <Avatar.default />
+    </div>
+  </header>
+</template>
+
+<style scoped>
+.btn {
+  height: 15px;
+  width: 15px;
+  margin: 5px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn1 {
+  background: #fac536;
+}
+
+.btn1::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50%;
+  height: 10%;
+  opacity: 0;
+  background: #222;
+  transition: 300ms;
+}
+
+.btn1:hover::before {
+  opacity: 1;
+  top: 50%;
+}
+
+.btn2 {
+  background: #39ea49;
+}
+
+.btn2::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 45%;
+  height: 45%;
+  opacity: 0;
+  background: #222;
+  transition: 300ms;
+}
+
+.btn2::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  width: 15%;
+  height: 80%;
+  opacity: 0;
+  background: #39ea49;
+  transition: 300ms;
+}
+
+.btn2:hover::before,
+.btn2:hover::after {
+  opacity: 1;
+  top: 50%;
+}
+
+.btn3 {
+  background: #f25056;
+}
+
+.btn3::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  width: 15%;
+  height: 50%;
+  opacity: 0;
+  background: #222;
+  transition: 300ms;
+}
+
+.btn3::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 15%;
+  opacity: 0;
+  height: 50%;
+  background: #222;
+  transition: 300ms;
+}
+
+.btn3:hover::before,
+.btn3:hover::after {
+  opacity: 1;
+  top: 50%;
+}
+
+.theme-icon {
+  font-size: 26px;
+  vertical-align: middle;
+}
+</style>

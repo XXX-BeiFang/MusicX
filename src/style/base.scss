@@ -1,0 +1,69 @@
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  font-family: 'hanyi', sans-serif !important;
+}
+
+html.light body {
+  background: #f8fafc;
+  position: relative;
+}
+
+html.dark body {
+  background: #232526;
+  position: relative;
+}
+
+// 滚动条
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: 226, 226, 226;
+  background-color: rgb(206, 206, 206);
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: 226, 226, 226;
+  background-color: rgb(66, 66, 66);
+  border-radius: 10px;
+}
+
+pre.hljs {
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 5px !important;
+  position: relative;
+  overflow: hidden !important;
+  code {
+    display: block !important;
+    margin: 0 10px !important;
+    overflow-x: auto !important;
+    &::-webkit-scrollbar {
+      z-index: 11;
+      width: 6px;
+    }
+    &::-webkit-scrollbar:horizontal {
+      height: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      border-radius: 5px;
+      width: 6px;
+      background: #666;
+    }
+    &::-webkit-scrollbar-corner,
+    &::-webkit-scrollbar-track {
+      background: #1e1e1e;
+    }
+    &::-webkit-scrollbar-track-piece {
+      background: #1e1e1e;
+      width: 6px;
+    }
+  }
+}

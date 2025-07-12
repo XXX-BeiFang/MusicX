@@ -1,0 +1,88 @@
+@startuml 音乐网站序列图
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 5
+skinparam maxmessagesize 60
+skinparam sequenceParticipant underline
+
+actor 用户 as User
+participant "登录组件\n(LoginPopup)" as Login
+participant "二维码登录\n(useLoginQr)" as QR
+participant "用户存储\n(UserStore)" as UserStore
+participant "API服务" as API
+participant "音乐播放器\n(AudioPlayer)" as Player
+participant "音频存储\n(AudioStore)" as AudioStore
+
+== 用户登录流程 ==
+
+User -> Login: 点击登录按钮
+activate Login
+
+Login -> QR: 初始化二维码登录
+activate QR
+
+QR -> API: 请求二维码key
+API --> QR: 返回二维码key
+
+QR -> API: 创建二维码
+API --> QR: 返回二维码图片URL
+
+QR -> QR: 开始轮询二维码状态
+
+User -> QR: 扫描二维码
+
+QR -> API: 检查二维码状态
+API --> QR: 返回授权成功状态
+
+QR -> API: 获取用户信息
+API --> QR: 返回用户详情
+
+QR -> UserStore: 保存用户信息
+activate UserStore
+UserStore -> UserStore: 设置登录状态
+QR --> Login: 通知登录成功
+deactivate QR
+
+Login --> User: 关闭登录窗口
+deactivate Login
+
+== 音乐播放流程 ==
+
+User -> Player: 选择歌曲播放
+activate Player
+
+Player -> AudioStore: 添加歌曲到播放列表
+activate AudioStore
+AudioStore -> AudioStore: 更新当前播放索引
+AudioStore --> Player: 返回更新后的播放列表
+deactivate AudioStore
+
+Player -> API: 获取歌曲URL
+API --> Player: 返回歌曲URL
+
+Player -> API: 获取歌词
+API --> Player: 返回歌词数据
+
+Player -> Player: 加载歌曲
+Player -> Player: 开始播放
+
+loop 播放过程
+    Player -> Player: 更新播放进度
+    Player -> Player: 更新当前歌词索引
+    Player --> User: 显示播放进度和歌词
+end
+
+User -> Player: 调整音量/进度/播放模式
+Player -> Player: 应用设置
+
+User -> Player: 暂停/继续播放
+Player -> Player: 切换播放状态
+
+User -> Player: 切换下一首/上一首
+Player -> AudioStore: 更新当前播放索引
+AudioStore --> Player: 返回新的当前歌曲
+Player -> Player: 加载并播放新歌曲
+
+deactivate Player
+
+@enduml

@@ -3,9 +3,11 @@ import { Icon } from '@iconify/vue'
 import * as Avatar from './components/avatar.vue'
 import { ref, onMounted } from 'vue'
 import * as ThemeSelector from '@/components/ThemeSelector.vue'
+import { settingStore } from '@/stores/modules/setting'
 
 const route = useRoute()
 const router = useRouter()
+const setting = settingStore()
 
 const searchText = ref('')
 const isDark = ref(false)
@@ -38,9 +40,20 @@ onMounted(() => {
     isDark.value = document.documentElement.classList.contains('dark')
   }
 })
+
+// 计算头部样式
+const headerStyle = computed(() => {
+  if (setting.wallpaper && setting.wallpaperType !== 'none') {
+    return {
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(10px)'
+    }
+  }
+  return {}
+})
 </script>
 <template>
-  <header class="px-4 py-2 border-b flex items-center">
+  <header class="px-4 py-2 border-b flex items-center" :style="headerStyle">
     <div class="flex relative w-60">
       <button class="btn btn1" />
       <button class="btn btn2" />
@@ -63,6 +76,7 @@ onMounted(() => {
           v-model="searchText"
           type="text"
           class="w-64 text-sm pl-8 pr-2 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-300 focus:w-80"
+          :class="{'bg-white/80 dark:bg-neutral-800/80': setting.wallpaper && setting.wallpaperType !== 'none'}"
           placeholder="搜索..."
           @keyup.enter="router.push('/search?query=' + searchText)"
         />

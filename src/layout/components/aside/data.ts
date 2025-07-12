@@ -9,8 +9,8 @@ export const MenuData = [
         title: '发现',
         children: [
             {
-                title: '搜索',
-                icon: 'Search',
+                title: '推荐',
+                icon: 'Star',
                 router: '/search',
                 shortcut: 'D',
             },
@@ -35,10 +35,10 @@ export const MenuData = [
                 icon: 'ChatDotRound',
                 router: '/chatGPT',
             },
-            { 
-                title: '图标示例', 
-                icon: 'Collection', 
-                router: '/utils' 
+            {
+                title: '图标示例',
+                icon: 'Collection',
+                router: '/utils'
             },
         ],
     },

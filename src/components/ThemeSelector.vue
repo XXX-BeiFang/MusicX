@@ -44,6 +44,21 @@ const applyCustomTheme = () => {
   showThemeSelector.value = false;
 };
 
+// 获取按钮位置，用于定位面板
+const buttonRef = ref<HTMLElement | null>(null);
+const panelPosition = ref({ top: '20px', right: '4px' });
+
+// 更新面板位置
+const updatePanelPosition = () => {
+  if (buttonRef.value) {
+    const rect = buttonRef.value.getBoundingClientRect();
+    panelPosition.value = {
+      top: `${rect.bottom + 10}px`,
+      right: `${window.innerWidth - rect.right}px`
+    };
+  }
+};
+
 // 初始化
 onMounted(() => {
   // 如果已经有保存的主题颜色，则应用它
@@ -56,59 +71,69 @@ onMounted(() => {
 <template>
   <div class="relative" ref="themePanel">
     <!-- 主题选择按钮 -->
-    <button 
-      @click="showThemeSelector = !showThemeSelector" 
+    <button
+      ref="buttonRef"
+      @click="showThemeSelector = !showThemeSelector; updatePanelPosition()"
       class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
       :title="`当前主题: ${settings.themeColorName}`"
     >
       <icon-tabler:palette class="text-xl" :style="{ color: settings.themeColor }" />
     </button>
-    
-    <!-- 主题选择器面板 -->
-    <div 
-      v-if="showThemeSelector" 
-      class="absolute right-0 mt-2 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 w-64"
-    >
-      <h3 class="text-sm font-medium mb-3">选择主题色</h3>
-      
-      <!-- 预设主题颜色 -->
-      <div class="grid grid-cols-3 gap-2 mb-4">
-        <button 
-          v-for="theme in presetThemes" 
-          :key="theme.name"
-          @click="applyTheme(theme.color, theme.name)"
-          class="flex flex-col items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          :class="{'ring-2 ring-offset-2': settings.themeColor === theme.color}"
-        >
-          <div class="w-6 h-6 rounded-full mb-1" :style="{ backgroundColor: theme.color }"></div>
-          <span class="text-xs">{{ theme.name }}</span>
-        </button>
-      </div>
-      
-      <!-- 自定义颜色 -->
-      <div class="mb-2">
-        <label class="text-xs font-medium block mb-1">自定义颜色</label>
-        <div class="flex items-center gap-2">
-          <input 
-            v-model="customColor" 
-            type="color" 
-            class="w-8 h-8 rounded cursor-pointer"
-          />
-          <input 
-            v-model="customColor" 
-            type="text" 
-            class="flex-1 px-2 py-1 text-sm border rounded"
-          />
-          <button 
-            @click="applyCustomTheme" 
-            class="px-2 py-1 text-xs text-white rounded"
-            :style="{ backgroundColor: customColor }"
+
+    <!-- 使用Teleport将主题选择器面板传送到body元素下，确保它不受父元素层级的影响 -->
+    <Teleport to="body">
+      <!-- 主题选择器面板 -->
+      <div
+        v-if="showThemeSelector"
+        class="theme-selector-panel p-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg w-64"
+        :style="{
+          position: 'fixed',
+          top: panelPosition.top,
+          right: panelPosition.right,
+          zIndex: 999999
+        }"
+      >
+        <h3 class="text-sm font-medium mb-3">选择主题色</h3>
+
+        <!-- 预设主题颜色 -->
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <button
+            v-for="theme in presetThemes"
+            :key="theme.name"
+            @click="applyTheme(theme.color, theme.name)"
+            class="flex flex-col items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            :class="{'ring-2 ring-offset-2': settings.themeColor === theme.color}"
           >
-            应用
+            <div class="w-6 h-6 rounded-full mb-1" :style="{ backgroundColor: theme.color }"></div>
+            <span class="text-xs">{{ theme.name }}</span>
           </button>
         </div>
+
+        <!-- 自定义颜色 -->
+        <div class="mb-2">
+          <label class="text-xs font-medium block mb-1">自定义颜色</label>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="customColor"
+              type="color"
+              class="w-8 h-8 rounded cursor-pointer"
+            />
+            <input
+              v-model="customColor"
+              type="text"
+              class="flex-1 px-2 py-1 text-sm border rounded"
+            />
+            <button
+              @click="applyCustomTheme"
+              class="px-2 py-1 text-xs text-white rounded"
+              :style="{ backgroundColor: customColor }"
+            >
+              应用
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -122,4 +147,8 @@ onMounted(() => {
 .ring-offset-2 {
   --tw-ring-offset-width: 2px;
 }
-</style> 
+
+.theme-selector-panel {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+</style>

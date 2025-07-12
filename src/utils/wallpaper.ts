@@ -2,43 +2,58 @@
  * 壁纸相关工具函数
  */
 
+// 导入壁纸图片
+import wallpaper1 from '@/assets/wallpapers/1.png'
+import wallpaper2 from '@/assets/wallpapers/2.png'
+import wallpaper3 from '@/assets/wallpapers/3.png'
+import wallpaper4 from '@/assets/wallpapers/4.png'
+import wallpaper5 from '@/assets/wallpapers/5.png'
+import wallpaper6 from '@/assets/wallpapers/6.png'
+import wallpaper7 from '@/assets/wallpapers/7.png'
+import wallpaper8 from '@/assets/wallpapers/8.png'
+
 // 预设壁纸列表
 export const presetWallpapers = [
   {
     id: 'wallpaper1',
     name: '富士山',
-    path: '/src/assets/wallpapers/1.png'
+    path: wallpaper1
   },
   {
     id: 'wallpaper2',
     name: '云雾山脉',
-    path: '/src/assets/wallpapers/2.png'
+    path: wallpaper2
   },
   {
     id: 'wallpaper3',
     name: '海边小店',
-    path: '/src/assets/wallpapers/3.png'
+    path: wallpaper3
   },
   {
     id: 'wallpaper4',
     name: '小动物池塘',
-    path: '/src/assets/wallpapers/4.png'
+    path: wallpaper4
   },
   {
     id: 'wallpaper5',
     name: '音乐少女',
-    path: '/src/assets/wallpapers/5.png'
+    path: wallpaper5
   },
   {
     id: 'wallpaper6',
     name: '雪山云海',
-    path: '/src/assets/wallpapers/6.png'
+    path: wallpaper6
   },
   {
     id: 'wallpaper7',
     name: '田园风光',
-    path: '/src/assets/wallpapers/7.png'
-  }
+    path: wallpaper7
+  },
+  {
+    id: 'wallpaper8',
+    name: '尼克朱迪',
+    path: wallpaper8
+  },
 ]
 
 /**

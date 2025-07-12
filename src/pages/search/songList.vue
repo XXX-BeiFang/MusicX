@@ -6,7 +6,7 @@ const route = useRoute()
 const props = defineProps({
   selected: {
     type: String,
-    default: '10',
+    default: '1000',
   },
 })
 const filteredPlaylists = ref<API.PlaylistsResponse>()

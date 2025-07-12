@@ -3,6 +3,7 @@ import { qualityList, languageOptions } from '@/utils/enum'
 import { presetWallpapers, fileToDataURL, validateImage } from '@/utils/wallpaper'
 import { ElMessage } from 'element-plus'
 import { AudioStore } from '@/stores/modules/audio'
+import { nextTick } from 'vue'
 
 const { volume, setVolume } = useAudioPlayer()
 const setting = settingStore()
@@ -40,8 +41,11 @@ const handleWallpaperUpload = async (event: Event) => {
 
 // 选择预设壁纸
 const selectPresetWallpaper = (wallpaper: typeof presetWallpapers[0]) => {
-  setting.setWallpaper(wallpaper.path, 'preset')
-  ElMessage.success(`已设置壁纸: ${wallpaper.name}`)
+  // 使用 nextTick 确保在 DOM 更新后再设置壁纸
+  nextTick(() => {
+    setting.setWallpaper(wallpaper.path, 'preset')
+    ElMessage.success(`已设置壁纸: ${wallpaper.name}`)
+  })
 }
 
 // 移除壁纸
@@ -53,6 +57,16 @@ const removeWallpaper = () => {
 // 判断当前壁纸是否选中
 const isWallpaperSelected = (path: string) => {
   return setting.wallpaper === path
+}
+
+// 处理语言变更
+const handleLanguageChange = (val: any) => {
+  setting.setSettingState('language', val)
+}
+
+// 处理音质变更
+const handleQualityChange = (val: any) => {
+  audio.setAudioStore('quality', val)
 }
 </script>
 <template>
@@ -121,7 +135,9 @@ const isWallpaperSelected = (path: string) => {
                 :class="[isWallpaperSelected(wallpaper.path) ? 'border-primary' : '']"
                 @click="selectPresetWallpaper(wallpaper)"
               >
-                <img :src="wallpaper.path" :alt="wallpaper.name" class="w-full h-24 object-cover" />
+                <div class="wallpaper-preview">
+                  <img :src="wallpaper.path" :alt="wallpaper.name" class="w-full h-full object-cover" />
+                </div>
                 <div class="p-2 text-center text-sm truncate">{{ wallpaper.name }}</div>
               </div>
             </div>
@@ -175,7 +191,7 @@ const isWallpaperSelected = (path: string) => {
               v-model="setting.language"
               placeholder="请选择语言"
               class="w-48"
-              @change="(val) => setting.setSettingState('language', val)"
+              @change="handleLanguageChange"
             >
               <el-option
                 v-for="option in languageOptions"
@@ -229,7 +245,7 @@ const isWallpaperSelected = (path: string) => {
             >
             <el-select
               v-model="audio.quality"
-              @change="(val) => audio.setAudioStore('quality', val)"
+              @change="handleQualityChange"
               placeholder="请选择音频质量"
               class="w-48"
             >
@@ -285,6 +301,13 @@ const isWallpaperSelected = (path: string) => {
 .wallpaper-item:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.wallpaper-preview {
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+  position: relative;
 }
 
 .hidden-upload {

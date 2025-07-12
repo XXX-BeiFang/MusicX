@@ -2,7 +2,10 @@
 import { MenuData } from './data'
 import { userPlaylist } from '@/api'
 import { API } from '@/api/interface'
+import { settingStore } from '@/stores/modules/setting'
+
 const user = UserStore()
+const setting = settingStore()
 
 const userPlay = ref<API.Playlist[]>([])
 
@@ -19,9 +22,20 @@ watch(
     immediate: true,
   }
 )
+
+// 计算侧边栏样式
+const asideStyle = computed(() => {
+  if (setting.wallpaper && setting.wallpaperType !== 'none') {
+    return {
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(10px)'
+    }
+  }
+  return {}
+})
 </script>
 <template>
-  <aside class="w-64 hidden h-full overflow-hidden md:block border-r">
+  <aside class="w-64 hidden h-full overflow-hidden md:block border-r" :style="asideStyle">
     <nav
       class="flex flex-col p-4 space-y-4 flex-1 h-full box-border overflow-hidden"
     >

@@ -16,7 +16,7 @@ import wallpaper8 from '@/assets/wallpapers/8.png'
 export const presetWallpapers = [
   {
     id: 'wallpaper1',
-    name: '富士山',
+    name: '晴空旷野',
     path: wallpaper1
   },
   {
@@ -26,32 +26,32 @@ export const presetWallpapers = [
   },
   {
     id: 'wallpaper3',
-    name: '海边小店',
+    name: '夏日晴空',
     path: wallpaper3
   },
   {
     id: 'wallpaper4',
-    name: '小动物池塘',
+    name: '碧海蓝天',
     path: wallpaper4
   },
   {
     id: 'wallpaper5',
-    name: '音乐少女',
+    name: '山峰云海',
     path: wallpaper5
   },
   {
     id: 'wallpaper6',
-    name: '雪山云海',
+    name: '牧羊犬',
     path: wallpaper6
   },
   {
     id: 'wallpaper7',
-    name: '田园风光',
+    name: '逐风少年',
     path: wallpaper7
   },
   {
     id: 'wallpaper8',
-    name: '尼克朱迪',
+    name: '疯狂动物城-尼克朱迪',
     path: wallpaper8
   },
 ]

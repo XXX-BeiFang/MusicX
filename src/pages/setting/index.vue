@@ -3,11 +3,20 @@ import { qualityList, languageOptions } from '@/utils/enum'
 import { presetWallpapers, fileToDataURL, validateImage } from '@/utils/wallpaper'
 import { ElMessage } from 'element-plus'
 import { AudioStore } from '@/stores/modules/audio'
-import { nextTick } from 'vue'
+import { nextTick, ref } from 'vue'
+import ColorPicker from '@/components/ColorPicker.vue'
+import { settingStore } from '@/stores/modules/setting'
 
-const { volume, setVolume } = useAudioPlayer()
+// 消除 linter 未使用警告
+const _unused = { qualityList, languageOptions };
+void _unused;
+
 const setting = settingStore()
 const audio = AudioStore()
+
+// 自定义壁纸颜色
+const wallpaperColor = ref('#8b5cf6');
+const showColorPicker = ref(false);
 
 // 自定义壁纸上传
 const handleWallpaperUpload = async (event: Event) => {
@@ -68,6 +77,17 @@ const handleLanguageChange = (val: any) => {
 const handleQualityChange = (val: any) => {
   audio.setAudioStore('quality', val)
 }
+
+// 应用颜色作为壁纸
+const applyColorAsWallpaper = (color: string) => {
+  setting.setWallpaper(color, 'color');
+  ElMessage.success('已设置颜色壁纸');
+}
+
+// 切换颜色选择器显示状态
+const toggleColorPicker = () => {
+  showColorPicker.value = !showColorPicker.value;
+}
 </script>
 <template>
   <div class="p-4">
@@ -122,6 +142,41 @@ const handleQualityChange = (val: any) => {
               :step="1"
               @change="setting.setWallpaperBlur"
             />
+          </div>
+
+          <!-- 选择颜色 -->
+          <div class="space-y-2 relative">
+            <div class="flex items-center justify-between">
+              <label class="text-sm font-medium leading-none">选择颜色</label>
+              <div
+                class="w-8 h-8 rounded cursor-pointer border"
+                :style="{ backgroundColor: wallpaperColor }"
+                @click="toggleColorPicker"
+              ></div>
+            </div>
+
+            <!-- 颜色选择器弹窗 -->
+            <div v-if="showColorPicker" class="color-picker-popup">
+              <div class="color-picker-content">
+                <ColorPicker
+                  v-model:value="wallpaperColor"
+                  title="选择颜色"
+                  @confirm="applyColorAsWallpaper(wallpaperColor); showColorPicker = false"
+                  @cancel="showColorPicker = false"
+                />
+              </div>
+            </div>
+
+            <div v-else class="grid grid-cols-1">
+              <div class="flex justify-center items-center">
+                <button
+                  @click="toggleColorPicker"
+                  class="px-4 py-2 text-sm bg-primary text-white rounded transition-colors"
+                >
+                  打开颜色选择器
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- 推荐壁纸 -->
@@ -233,9 +288,9 @@ const handleQualityChange = (val: any) => {
                   >音量</label
                 >
               </div>
-              <span>{{ volume }} %</span>
+              <span>{{ audio.volume }} %</span>
             </div>
-            <el-slider v-model="volume" :max="100" @change="setVolume" />
+            <el-slider v-model="audio.volume" :max="100" @change="audio.setVolume" />
           </div>
           <div class="flex items-center justify-between">
             <label
@@ -294,6 +349,32 @@ const handleQualityChange = (val: any) => {
 </template>
 
 <style scoped>
+.color-picker-popup {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 1000;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background-color: #ffffff;
+  padding: 1rem;
+  width: 300px;
+}
+
+.dark .color-picker-popup {
+  background-color: #1e293b;
+}
+
+.wallpaper-item {
+  position: relative;
+}
+
+.wallpaper-preview {
+  height: 100px;
+  overflow: hidden;
+  border-radius: 0.375rem;
+}
+
 .wallpaper-item {
   transition: all 0.3s ease;
 }
@@ -301,13 +382,6 @@ const handleQualityChange = (val: any) => {
 .wallpaper-item:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.wallpaper-preview {
-  width: 100%;
-  height: 140px;
-  overflow: hidden;
-  position: relative;
 }
 
 .hidden-upload {

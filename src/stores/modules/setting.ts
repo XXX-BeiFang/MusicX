@@ -58,7 +58,7 @@ export const settingStore = defineStore({
         },
 
         // 设置壁纸
-        setWallpaper(wallpaper: string | null, type: 'preset' | 'custom' | 'none') {
+        setWallpaper(wallpaper: string | null, type: 'preset' | 'custom' | 'none' | 'color') {
             this.wallpaper = wallpaper;
             this.wallpaperType = type;
         },

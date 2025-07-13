@@ -14,8 +14,8 @@ export const settingStore = defineStore({
         // 当前系统语言
         language: null,
         // 主题颜色
-        themeColor: '#8b5cf6', // 默认紫色
-        themeColorName: '默认紫',
+        themeColor: '#171717', // 默认酷炫黑
+        themeColorName: '酷炫黑',
         // 壁纸设置
         wallpaper: null,
         wallpaperType: 'none',

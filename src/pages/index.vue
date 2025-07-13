@@ -99,7 +99,7 @@ onMounted(async () => {
   try {
     // 使用personalized接口获取推荐歌单
     const { result } = await personalized({ limit: 6 })
-    
+
     // 将第一个歌单设置为固定的自定义歌单
     const customPlaylist = {
       id: 745701140,
@@ -117,7 +117,7 @@ onMounted(async () => {
       updateTime: 0,
       playlistCount: 0
     }
-    
+
     // 确保result是数组
     if (Array.isArray(result) && result.length > 0) {
       // 将RecommendPlaylist转换为Playlist类型
@@ -279,14 +279,14 @@ const navigateToBanner = (item: any) => {
           <!-- 网易云风格轮播区域 -->
           <div class="flex items-start space-x-4">
             <!-- 左侧轮播图区域 -->
-            <div class="w-2/5 relative rounded-lg overflow-hidden h-[160px]" 
-                 @mouseenter="handleMouseEnter" 
+            <div class="w-2/5 relative rounded-lg overflow-hidden h-[160px]"
+                 @mouseenter="handleMouseEnter"
                  @mouseleave="handleMouseLeave">
               <template v-if="bannerList.length > 0">
-                <div v-for="(item, index) in bannerList" :key="index" 
+                <div v-for="(item, index) in bannerList" :key="index"
                      class="absolute w-full h-full transition-opacity duration-500"
                      :class="index === activeBanner ? 'opacity-100 z-10' : 'opacity-0 z-0'">
-                  <img 
+                  <img
                     :src="getBannerImage(item)"
                     :alt="item.typeTitle || '推荐'"
                     class="w-full h-full object-cover rounded-lg"
@@ -294,7 +294,7 @@ const navigateToBanner = (item: any) => {
                   />
                   <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
                     <div class="flex items-center justify-between">
-                      <button 
+                      <button
                         class="px-4 py-1 bg-black/50 text-white text-xs rounded-full hover:bg-black/70 transition"
                         @click.stop="navigateToBanner(item)"
                       >
@@ -307,8 +307,8 @@ const navigateToBanner = (item: any) => {
               </template>
               <!-- <div v-else class="w-full h-full">
                 <img
-                  src="@/assets/banner/963.png" 
-                  alt="默认轮播图" 
+                  src="@/assets/banner/963.png"
+                  alt="默认轮播图"
                   class="w-full h-full object-cover rounded-lg"
                 />
                 <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
@@ -318,25 +318,25 @@ const navigateToBanner = (item: any) => {
                   </div>
                 </div>
               </div> -->
-              
+
               <!-- 左右箭头导航 -->
               <!-- <div class="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-between px-2 pointer-events-none">
-                <button 
-                  @click.stop="prevBanner" 
+                <button
+                  @click.stop="prevBanner"
                   class="w-8 h-8 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50 transition-all pointer-events-auto"
                   :class="showArrows ? 'opacity-100' : 'opacity-0'"
                 >
                   <icon-tabler:chevron-left class="text-xl" />
                 </button>
-                <button 
-                  @click.stop="nextBanner" 
+                <button
+                  @click.stop="nextBanner"
                   class="w-8 h-8 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50 transition-all pointer-events-auto"
                   :class="showArrows ? 'opacity-100' : 'opacity-0'"
                 >
                   <icon-tabler:chevron-right class="text-xl" />
                 </button>
               </div> -->
-              
+
               <!-- 轮播指示器 - 修改为正下方位置 -->
               <div class="absolute bottom-4 left-0 right-0 flex justify-center z-20">
                 <div class="flex space-x-2 bg-black/30 px-2 py-1 rounded-full">
@@ -348,23 +348,23 @@ const navigateToBanner = (item: any) => {
                 </div>
               </div>
             </div>
-            
+
             <!-- 中间推荐区域 -->
             <div class="flex-1 h-full">
               <div class="mb-3">
                 <h3 class="text-lg font-medium">下午好，猜你喜欢听</h3>
                 <p class="text-sm text-gray-500">根据你的口味生成专属推荐</p>
               </div>
-              
+
               <!-- 推荐卡片网格 -->
               <div class="grid grid-cols-4 gap-2">
-                <div v-for="item in personalizedList" :key="item.id" 
+                <div v-for="item in personalizedList" :key="item.id"
                      @click="router.push(`/playlist/${item.id}`)"
                      class="rounded bg-gray-100/10 cursor-pointer hover:bg-gray-100/20 transition p-2 flex flex-col justify-center items-center group hover:shadow-lg hover:shadow-primary transform hover:-translate-y-1 duration-300">
                   <div class="w-14 h-14 overflow-hidden rounded mb-2 relative">
                     <div class="aspect-square w-full h-full">
-                      <img :src="getRecommendImage(item)" :alt="item.name" 
-                           class="w-full h-full object-cover group-hover:scale-110 transition duration-300" 
+                      <img :src="getRecommendImage(item)" :alt="item.name"
+                           class="w-full h-full object-cover group-hover:scale-110 transition duration-300"
                            style="object-fit: cover;"/>
                     </div>
                     <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -375,9 +375,9 @@ const navigateToBanner = (item: any) => {
                 </div>
               </div>
             </div>
-            
+
             <!-- 右侧ChatGPT入口 -->
-            <div 
+            <div
               class="w-1/5 rounded-lg overflow-hidden relative cursor-pointer h-[160px] theme-gradient"
               @click="router.push('/chatGPT')"
             >
@@ -395,21 +395,22 @@ const navigateToBanner = (item: any) => {
         </div>
       </div>
       <!-- banner end -->
-      
+
       <!-- 主要内容区域 -->
       <div class="px-4">
         <!-- 推荐歌单 -->
         <div class="mt-4">
-          <div class="flex items-center mb-6 cursor-pointer group" @click="router.push('/playlist')">
-            <h2 class="text-2xl font-bold mr-2 group-hover:text-primary">推荐歌单</h2>
-            <icon-ep:arrow-right-bold class="text-xl group-hover:text-primary" />
+          <div class="flex items-center mb-6 group">
+            <div class="flex items-center cursor-pointer hover:scale-105 transition-transform" @click="router.push('/playlist')">
+              <h2 class="text-2xl font-bold mr-2 group-hover:text-primary">推荐歌单</h2>
+              <icon-ep:arrow-right-bold class="text-xl group-hover:text-primary" />
+            </div>
           </div>
           <div class="grid grid-cols-6 gap-6">
             <div
               v-for="playlist in recommendeList"
               :key="playlist.id"
-              @click="router.push(`/playlist/${playlist.id}`)"
-              class="group cursor-pointer transform transition-all duration-300 hover:shadow-xl hover:shadow-primary hover:-translate-y-1 rounded-lg"
+              class="group transform transition-all duration-300 hover:shadow-xl hover:shadow-primary hover:-translate-y-1 rounded-lg"
             >
               <div class="relative aspect-square rounded-lg overflow-hidden">
                 <img
@@ -437,7 +438,7 @@ const navigateToBanner = (item: any) => {
             </div>
           </div>
         </div>
-        
+
         <!-- 增加排行榜区域 -->
         <div class="mt-12">
           <h2 class="text-2xl font-bold mb-6">音乐排行榜</h2>
@@ -467,7 +468,7 @@ const navigateToBanner = (item: any) => {
                   >
                   <div class="flex-1">
                     <h4 class="font-medium truncate">{{ song.name }}</h4>
-                    <p class="text-sm text-gray-500 truncate">
+                    <p class="text-sm artist-name truncate">
                       {{ song.ar.map((item) => item.name).join() }}
                     </p>
                   </div>
@@ -477,16 +478,17 @@ const navigateToBanner = (item: any) => {
           </div>
         </div>
         <div class="mt-12 mb-24">
-          <div class="flex items-center mb-6 cursor-pointer group" @click="router.push('/artist')">
-            <h2 class="text-2xl font-bold mr-2 group-hover:text-primary">热门歌手</h2>
-            <icon-ep:arrow-right-bold class="text-xl group-hover:text-primary" />
+          <div class="flex items-center mb-6 group">
+            <div class="flex items-center cursor-pointer hover:scale-105 transition-transform" @click="router.push('/artist')">
+              <h2 class="text-2xl font-bold mr-2 group-hover:text-primary">热门歌手</h2>
+              <icon-ep:arrow-right-bold class="text-xl group-hover:text-primary" />
+            </div>
           </div>
           <div class="grid grid-cols-6 gap-6">
             <div
               v-for="artist in artists"
               :key="artist.id"
-              class="text-center group cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-primary"
-              @click="router.push(`/artist/${artist.id}`)"
+              class="text-center group transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-primary"
             >
               <div class="aspect-square rounded-full overflow-hidden mb-3">
                 <img
@@ -496,7 +498,7 @@ const navigateToBanner = (item: any) => {
                 />
               </div>
               <h3 class="font-medium group-hover:text-primary transition-colors">{{ artist.name }}</h3>
-              <p class="text-sm text-gray-500">{{ artist.fans }} 粉丝</p>
+              <p class="text-sm fans-count">{{ artist.fans }} 粉丝</p>
             </div>
           </div>
         </div>

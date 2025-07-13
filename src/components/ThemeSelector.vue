@@ -15,9 +15,9 @@ const colorPickerRef = ref<HTMLElement | null>(null);
 
 // 预设主题颜色
 const presetThemes = [
+  { name: '酷炫黑', color: '#171717' },
   { name: '韵味紫', color: '#8b5cf6' },
   { name: '朱砂红', color: '#e11d48' },
-  { name: '酷炫黑', color: '#171717' },
   { name: '天空蓝', color: '#0ea5e9' },
   { name: '翡翠绿', color: '#10b981' },
   { name: '橙黄色', color: '#f59e0b' },

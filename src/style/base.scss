@@ -7,10 +7,10 @@ body,
 }
 
 :root {
-  --primary: #171717; /* 默认酷炫黑 */
-  --primary-rgb: 23, 23, 23; /* RGB 格式 */
-  --primary-hover: #2d2d2d;
-  --primary-light: rgba(23, 23, 23, 0.2);
+  --primary: #8b5cf6; /* 默认紫色 */
+  --primary-rgb: 139, 92, 246; /* RGB 格式 */
+  --primary-hover: #7c3aed;
+  --primary-light: rgba(139, 92, 246, 0.2);
 }
 
 html.light body {
@@ -117,28 +117,4 @@ pre.hljs {
 /* 主题阴影 */
 .hover\:shadow-primary:hover {
   box-shadow: 0 4px 14px rgba(var(--primary-rgb), 0.25) !important;
-}
-
-/* 歌手名称和粉丝数样式 */
-.artist-name {
-  color: #5b21b6; /* 深紫色 - 浅色模式下 */
-  font-weight: 500;
-}
-
-.dark .artist-name {
-  color: #c4b5fd; /* 浅紫色 - 深色模式下 */
-}
-
-.fans-count {
-  color: #0369a1; /* 深蓝色 - 浅色模式下 */
-  font-weight: 500;
-}
-
-.dark .fans-count {
-  color: #7dd3fc; /* 浅蓝色 - 深色模式下 */
-}
-
-/* 鼠标悬停时的效果 */
-.artist-name:hover, .fans-count:hover {
-  color: var(--primary);
 }

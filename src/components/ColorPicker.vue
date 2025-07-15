@@ -39,13 +39,13 @@ const lightness = ref(50);
 // 计算色相渐变的背景色
 const hueColor = computed(() => {
   const h = hue.value;
-  const s = 100; // 最大饱和度
-  const l = 50; // 中等亮度
+  const s = saturation.value / 100;
+  const l = lightness.value / 100;
 
   // 从HSL转换为RGB
-  const c = (1 - Math.abs(2 * l / 100 - 1)) * s / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-  const m = l / 100 - c / 2;
+  const m = l - c / 2;
 
   let r, g, b;
 
@@ -309,7 +309,7 @@ onMounted(() => {
         @mousedown.stop="startDrag"
         :style="{
           background: `linear-gradient(to top, #000, transparent),
-                      linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))`
+                      linear-gradient(to right, #fff, ${hueColor})`
         }"
       >
         <div class="cursor-pointer relative w-full h-32">

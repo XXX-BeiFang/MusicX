@@ -31,48 +31,62 @@ const bannerList = ref<any[]>([])
 const activeBanner = ref(0)
 // 猜你喜欢数据
 const personalizedList = ref<API.RecommendPlaylist[]>([])
-// 控制左右箭头的显示
-const showArrows = ref(false)
+// 当前悬停的指示器索引
+const hoveredIndicator = ref(-1)
+// 自动轮播定时器
+const autoPlayTimer = ref<NodeJS.Timeout | null>(null)
+// 是否暂停自动轮播（鼠标悬停时）
+const isPaused = ref(false)
 
 // 轮播图切换函数
 const changeBanner = (index: number) => {
   activeBanner.value = index
 }
 
-// 手动切换到上一张或下一张
-const prevBanner = () => {
-  activeBanner.value = (activeBanner.value - 1 + bannerList.value.length) % bannerList.value.length
+// 上一张轮播图
+const previousBanner = () => {
+  if (bannerList.value.length === 0) return
+  activeBanner.value = activeBanner.value === 0 ? bannerList.value.length - 1 : activeBanner.value - 1
 }
 
+// 下一张轮播图
 const nextBanner = () => {
+  if (bannerList.value.length === 0) return
   activeBanner.value = (activeBanner.value + 1) % bannerList.value.length
 }
 
-// 定时切换轮播图
-let bannerTimer: any = null
-const startBannerTimer = () => {
-  bannerTimer = setInterval(() => {
-    activeBanner.value = (activeBanner.value + 1) % (bannerList.value.length || 1)
-  }, 5000) // 5秒切换一次
+// 开始自动轮播
+const startAutoPlay = () => {
+  if (autoPlayTimer.value) {
+    clearInterval(autoPlayTimer.value)
+  }
+  autoPlayTimer.value = setInterval(() => {
+    if (!isPaused.value) {
+      // 固定12个指示器，循环切换
+      activeBanner.value = (activeBanner.value + 1) % 12
+    }
+  }, 4000) // 每4秒切换一次
 }
 
-// 清除定时器
-const clearBannerTimer = () => {
-  if (bannerTimer) {
-    clearInterval(bannerTimer)
+// 停止自动轮播
+const stopAutoPlay = () => {
+  if (autoPlayTimer.value) {
+    clearInterval(autoPlayTimer.value)
+    autoPlayTimer.value = null
   }
 }
 
-// 鼠标进入轮播图区域
-const handleMouseEnter = () => {
-  clearBannerTimer()
-  showArrows.value = true
+// 鼠标悬停指示器时切换
+const handleIndicatorHover = (index: number) => {
+  hoveredIndicator.value = index
+  activeBanner.value = index
+  isPaused.value = true // 暂停自动轮播
 }
 
-// 鼠标离开轮播图区域
-const handleMouseLeave = () => {
-  startBannerTimer()
-  showArrows.value = false
+// 鼠标离开指示器区域时的处理
+const handleIndicatorLeave = () => {
+  hoveredIndicator.value = -1
+  isPaused.value = false // 恢复自动轮播
 }
 
 // 页面挂载时初始化数据
@@ -81,9 +95,11 @@ onMounted(async () => {
     // 获取轮播图数据
     const bannerData: any = await banner()
     if (bannerData && bannerData.banners) {
-      bannerList.value = bannerData.banners.slice(0, 6) // 取前6个轮播图
-      // 启动轮播定时器
-      startBannerTimer()
+      bannerList.value = bannerData.banners.slice(0, 12) // 取前12个轮播图
+      // 启动自动轮播
+      nextTick(() => {
+        startAutoPlay()
+      })
     }
 
     // 获取个性化推荐数据(猜你喜欢)
@@ -98,8 +114,8 @@ onMounted(async () => {
   // 获取推荐歌单
   try {
     // 使用personalized接口获取推荐歌单
-    const { result } = await personalized({ limit: 6 })
-    
+    const { result: playlistResult } = await personalized({ limit: 6 })
+
     // 将第一个歌单设置为固定的自定义歌单
     const customPlaylist = {
       id: 745701140,
@@ -117,11 +133,11 @@ onMounted(async () => {
       updateTime: 0,
       playlistCount: 0
     }
-    
-    // 确保result是数组
-    if (Array.isArray(result) && result.length > 0) {
+
+    // 确保playlistResult是数组
+    if (Array.isArray(playlistResult) && playlistResult.length > 0) {
       // 将RecommendPlaylist转换为Playlist类型
-      const playlistsFromAPI = result.map(item => ({
+      const playlistsFromAPI = playlistResult.map(item => ({
         id: item.id,
         name: item.name,
         coverImgUrl: item.picUrl,
@@ -168,44 +184,51 @@ onMounted(async () => {
     }]
   }
 
-  // 获取排行榜
-  const { data } = await getTopSong()
-  topSongList.value = data
+  // 获取其他数据
+  try {
+    // 获取排行榜
+    const { data } = await getTopSong()
+    topSongList.value = data
 
-  TopArtists().then((res: any) => {
-      if (res && res.artists) {
-        artists.value = res.artists.map((item: any) => ({
-          id: item.id,
-          avatar: item.img1v1Url,
-          name: item.name,
-          fans: item.fansCount,
-        }))
-      }
+    // 获取歌手数据
+    TopArtists().then((res: any) => {
+        if (res && res.artists) {
+          artists.value = res.artists.map((item: any) => ({
+            id: item.id,
+            avatar: item.img1v1Url,
+            name: item.name,
+            fans: item.fansCount,
+          }))
+        }
+      })
+
+    // 使用配置化的方式定义榜单参数
+    const chartConfigs = [
+      { id: 3779629, index: 0 }, // 新歌榜
+      { id: 3778678, index: 1 }, // 热歌榜
+      { id: 19723756, index: 2 }, // 飙升榜
+    ]
+
+    // 批量获取榜单数据
+    Promise.all(
+      chartConfigs.map(({ id }) => playlistTrackAll({ id, limit: 10 }))
+    ).then((results) => {
+      results.forEach((res: any, i: number) => {
+        if (res && res.songs) {
+          charts.value[chartConfigs[i].index].songs = res.songs
+        }
+      })
+    }).catch((error) => {
+      console.error('获取榜单数据失败:', error)
     })
-
-  // 使用配置化的方式定义榜单参数
-  const chartConfigs = [
-    { id: 3779629, index: 0 }, // 新歌榜
-    { id: 3778678, index: 1 }, // 热歌榜
-    { id: 19723756, index: 2 }, // 飙升榜
-  ]
-
-  // 批量获取榜单数据
-  Promise.all(
-    chartConfigs.map(({ id }) => playlistTrackAll({ id, limit: 10 }))
-  ).then((results) => {
-    results.forEach((res: any, i: number) => {
-      if (res && res.songs) {
-        charts.value[chartConfigs[i].index].songs = res.songs
-      }
-
-    })
-  })
+  } catch (error) {
+    console.error('获取其他数据失败:', error)
+  }
 })
 
-// 组件卸载时清除定时器
+// 组件卸载时的清理工作
 onUnmounted(() => {
-  clearBannerTimer()
+  stopAutoPlay() // 清理定时器
 })
 
 const handlePlaylclick = async (row: any) => {
@@ -244,13 +267,67 @@ const artists = ref<Pick<API.Artist, 'id' | 'avatar' | 'name' | 'fans'>[]>([])
 
 // 辅助函数：获取轮播图图片路径
 const getBannerImage = (item: any) => {
-  if (item.picUrl) {
-    return item.picUrl + '?param=300y160' // 调整图片大小
+  if (item.pic) {
+    // 如果是网易云音乐的图片链接，直接使用，否则添加参数
+    if (item.pic.includes('music.126.net')) {
+      return item.pic + '?param=600y280'
+    } else {
+      return item.pic
+    }
+  } else if (item.picUrl) {
+    return item.picUrl.includes('music.126.net') ? item.picUrl + '?param=600y280' : item.picUrl
   } else if (item.imageUrl) {
-    return item.imageUrl + '?param=300y160'
+    return item.imageUrl.includes('music.126.net') ? item.imageUrl + '?param=600y280' : item.imageUrl
   } else {
     return rootGedanImg // 默认图片
   }
+}
+
+// 获取歌手名
+const getArtistName = (item: any) => {
+  if (!item) return '未知歌手'
+  // 尝试从不同字段获取歌手名
+  if (item.song && item.song.artists && item.song.artists.length > 0) {
+    return item.song.artists[0].name
+  }
+  if (item.artist) return item.artist
+  if (item.typeTitle) return item.typeTitle
+  return '热门歌手'
+}
+
+
+
+// 获取歌曲标题
+const getSongTitle = (item: any) => {
+  if (!item) return '精选推荐'
+  if (item.song && item.song.name) return item.song.name
+  if (item.typeTitle) return item.typeTitle
+  return '热门推荐'
+}
+
+// 获取歌曲副标题
+const getSongSubtitle = (item: any) => {
+  if (!item) return '发现更多精彩内容'
+  if (item.song && item.song.album && item.song.album.name) {
+    return item.song.album.name
+  }
+  return '发现更多精彩内容'
+}
+
+// 获取轮播图标签
+const getBannerTag = (item: any) => {
+  if (!item) return '推荐'
+  if (item.typeTitle && item.typeTitle.includes('新歌')) return '新歌首发'
+  if (item.typeTitle && item.typeTitle.includes('专辑')) return '新专辑'
+  if (item.typeTitle && item.typeTitle.includes('MV')) return '热门MV'
+  return '热门推荐'
+}
+
+// 图片加载错误处理
+const handleImageError = (event: Event, item: any) => {
+  const img = event.target as HTMLImageElement
+  console.warn('轮播图图片加载失败:', item.pic || item.picUrl || item.imageUrl)
+  img.src = rootGedanImg // 使用默认图片
 }
 
 // 辅助函数：获取推荐卡片图片路径
@@ -273,121 +350,138 @@ const navigateToBanner = (item: any) => {
 <template>
   <div class="flex p-4 w-full">
     <div class="flex-1">
-      <!-- 网易云音乐风格banner -->
+      <!-- 现代化音乐轮播区域 -->
       <div class="w-full flex flex-col overflow-hidden">
-        <div class="bg-white/5 rounded-lg p-4 mb-8">
-          <!-- 网易云风格轮播区域 -->
-          <div class="flex items-start space-x-4">
-            <!-- 左侧轮播图区域 -->
-            <div class="w-2/5 relative rounded-lg overflow-hidden h-[160px]" 
-                 @mouseenter="handleMouseEnter" 
-                 @mouseleave="handleMouseLeave">
-              <template v-if="bannerList.length > 0">
-                <div v-for="(item, index) in bannerList" :key="index" 
-                     class="absolute w-full h-full transition-opacity duration-500"
-                     :class="index === activeBanner ? 'opacity-100 z-10' : 'opacity-0 z-0'">
-                  <img 
-                    :src="getBannerImage(item)"
-                    :alt="item.typeTitle || '推荐'"
-                    class="w-full h-full object-cover rounded-lg"
-                    @click="navigateToBanner(item)"
-                  />
-                  <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-                    <div class="flex items-center justify-between">
-                      <button 
-                        class="px-4 py-1 bg-black/50 text-white text-xs rounded-full hover:bg-black/70 transition"
-                        @click.stop="navigateToBanner(item)"
-                      >
-                        立即前往
-                      </button>
-                      <span class="text-white/80 text-xs">{{ item.typeTitle || '热门推荐' }}</span>
+        <div class="bg-card backdrop-blur-md rounded-2xl p-6 mb-8 border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl hover:bg-card/80 transition-all duration-300 hover:scale-[1.02]">
+          <!-- 现代化轮播区域 -->
+          <div class="flex items-stretch space-x-6 h-[200px]">
+            <!-- 左侧轮播图区域 - 网易云风格 -->
+            <div class="w-2/5 relative rounded-lg overflow-hidden shadow-lg group h-full">
+              <!-- 轮播图容器 -->
+              <div class="relative w-full h-full">
+                <template v-if="bannerList.length > 0">
+                  <div v-for="(item, index) in bannerList" :key="index"
+                       class="absolute w-full h-full transition-all duration-500 ease-in-out"
+                       :class="index === (activeBanner % bannerList.length) ? 'opacity-100 z-10' : 'opacity-0 z-0'">
+                    <img
+                      :src="getBannerImage(item)"
+                      :alt="item.typeTitle || '推荐'"
+                      class="w-full h-full object-cover cursor-pointer"
+                      @click="navigateToBanner(item)"
+                      @error="handleImageError($event, item)"
+                      loading="lazy"
+                    />
+
+                    <!-- 右下角标签 -->
+                    <div class="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 shadow-lg">
+                      <span class="text-white text-xs font-semibold tracking-wide">
+                        {{ getBannerTag(item) }}
+                      </span>
                     </div>
                   </div>
-                </div>
-              </template>
-              <!-- <div v-else class="w-full h-full">
-                <img
-                  src="@/assets/banner/963.png" 
-                  alt="默认轮播图" 
-                  class="w-full h-full object-cover rounded-lg"
-                />
-                <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-                  <div class="flex items-center justify-between">
-                    <button class="px-4 py-1 bg-black/50 text-white text-xs rounded-full">立即播放</button>
-                    <span class="text-white/80 text-xs">推荐音乐</span>
-                  </div>
-                </div>
-              </div> -->
-              
-              <!-- 左右箭头导航 -->
-              <!-- <div class="absolute top-0 left-0 right-0 bottom-0 flex items-center justify-between px-2 pointer-events-none">
-                <button 
-                  @click.stop="prevBanner" 
-                  class="w-8 h-8 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50 transition-all pointer-events-auto"
-                  :class="showArrows ? 'opacity-100' : 'opacity-0'"
-                >
-                  <icon-tabler:chevron-left class="text-xl" />
-                </button>
-                <button 
-                  @click.stop="nextBanner" 
-                  class="w-8 h-8 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50 transition-all pointer-events-auto"
-                  :class="showArrows ? 'opacity-100' : 'opacity-0'"
-                >
-                  <icon-tabler:chevron-right class="text-xl" />
-                </button>
-              </div> -->
-              
-              <!-- 轮播指示器 - 修改为正下方位置 -->
-              <div class="absolute bottom-4 left-0 right-0 flex justify-center z-20">
-                <div class="flex space-x-2 bg-black/30 px-2 py-1 rounded-full">
+                </template>
+
+                <!-- 底部指示器 - 现代化设计 -->
+                <div class="absolute bottom-4 left-4 flex items-center space-x-2 z-20">
                   <div v-for="(_, index) in bannerList" :key="index"
-                       @click.stop="changeBanner(index)"
-                       @mouseenter="changeBanner(index)"
-                       class="w-2 h-2 rounded-full cursor-pointer transition-all duration-300"
-                       :class="index === activeBanner ? 'bg-white scale-125' : 'bg-white/50 hover:bg-white/80'"></div>
+                       @mouseenter="handleIndicatorHover(index)"
+                       @mouseleave="handleIndicatorLeave"
+                       class="cursor-pointer group relative"
+                  >
+                    <!-- 活跃指示器的外圈动画 -->
+                    <div
+                      v-if="index === (activeBanner % bannerList.length)"
+                      class="absolute inset-0 w-3 h-3 rounded-full border border-white/80 animate-pulse"
+                      style="animation: ripple 2s infinite;"
+                    ></div>
+
+                    <!-- 主指示器 -->
+                    <div
+                      class="relative transition-all duration-500 ease-out transform"
+                      :class="[
+                        index === (activeBanner % bannerList.length)
+                          ? 'w-3 h-3 bg-white rounded-full shadow-lg scale-110'
+                          : 'w-2 h-2 bg-white/70 rounded-full hover:bg-white hover:scale-125 group-hover:shadow-lg'
+                      ]"
+                    >
+                      <!-- 内部光点效果 -->
+                      <div
+                        v-if="index === (activeBanner % bannerList.length)"
+                        class="absolute inset-0.5 bg-white/90 rounded-full animate-ping"
+                        style="animation-duration: 1.5s;"
+                      ></div>
+                    </div>
+
+                    <!-- 悬停时的扩散效果 -->
+                    <div
+                      class="absolute inset-0 w-3 h-3 rounded-full bg-white/20 scale-0 group-hover:scale-150 transition-transform duration-300 ease-out"
+                    ></div>
+                  </div>
+                </div>
+
+                <!-- 左右切换按钮 -->
+                <div class="absolute left-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <button @click="previousBanner" class="w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-all duration-200">
+                    <icon-tabler:chevron-left class="w-5 h-5" />
+                  </button>
+                </div>
+                <div class="absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <button @click="nextBanner" class="w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-all duration-200">
+                    <icon-tabler:chevron-right class="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             </div>
-            
-            <!-- 中间推荐区域 -->
-            <div class="flex-1 h-full">
-              <div class="mb-3">
-                <h3 class="text-lg font-medium">下午好，猜你喜欢听</h3>
-                <p class="text-sm text-gray-500">根据你的口味生成专属推荐</p>
+
+              <!-- 中间推荐区域 -->
+              <div class="flex-1 h-full flex flex-col">
+              <div class="mb-1.5">
+                <h3 class="text-lg font-bold text-gray-900 dark:text-gray-100 drop-shadow-lg inline">下午好，猜你喜欢听</h3>
+                <span class="text-sm text-gray-700 dark:text-gray-200 ml-2 drop-shadow-sm">根据你的口味生成专属推荐</span>
               </div>
-              
-              <!-- 推荐卡片网格 -->
-              <div class="grid grid-cols-4 gap-2">
-                <div v-for="item in personalizedList" :key="item.id" 
+
+              <!-- 推荐卡片网格 - 4个歌单2x2排列 -->
+              <div class="grid grid-cols-2 gap-1.5 flex-1 -mt-0.5">
+                <div v-for="item in personalizedList.slice(0, 4)" :key="item.id"
                      @click="router.push(`/playlist/${item.id}`)"
-                     class="rounded bg-gray-100/10 cursor-pointer hover:bg-gray-100/20 transition p-2 flex flex-col justify-center items-center group hover:shadow-lg hover:shadow-primary transform hover:-translate-y-1 duration-300">
-                  <div class="w-14 h-14 overflow-hidden rounded mb-2 relative">
-                    <div class="aspect-square w-full h-full">
-                      <img :src="getRecommendImage(item)" :alt="item.name" 
-                           class="w-full h-full object-cover group-hover:scale-110 transition duration-300" 
-                           style="object-fit: cover;"/>
-                    </div>
-                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <icon-tabler:player-play class="text-white text-xl" />
+                     class="rounded-lg bg-card cursor-pointer hover:bg-card/80 transition-all p-2 flex items-center group hover:shadow-md hover:shadow-gray-200/50 dark:hover:shadow-black/50 transform hover:-translate-y-0.5 hover:scale-105 duration-300 border border-white/30 dark:border-white/20 backdrop-blur-md">
+                  <!-- 歌单封面 -->
+                  <div class="w-10 h-10 overflow-hidden rounded-lg relative shadow-sm flex-shrink-0 mr-2">
+                    <img :src="getRecommendImage(item)" :alt="item.name"
+                         class="w-full h-full object-cover group-hover:scale-110 transition duration-300"
+                         style="object-fit: cover;"/>
+                    <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center rounded-lg">
+                      <icon-tabler:player-play class="text-white text-xs drop-shadow-lg" />
                     </div>
                   </div>
-                  <span class="text-xs line-clamp-2 text-center">{{ item.name }}</span>
+                  <!-- 歌单信息 -->
+                  <div class="flex-1 flex flex-col justify-center min-w-0">
+                    <h4 class="text-xs font-medium text-gray-900 dark:text-gray-100 group-hover:text-gray-900 dark:group-hover:text-white transition-colors leading-tight drop-shadow-md line-clamp-2" :title="item.name">{{ item.name }}</h4>
+                    <p v-if="item.copywriter" class="text-xs text-gray-700 dark:text-gray-200 mt-0.5 leading-tight line-clamp-1" :title="item.copywriter">{{ item.copywriter }}</p>
+                  </div>
                 </div>
               </div>
             </div>
-            
-            <!-- 右侧ChatGPT入口 -->
-            <div 
-              class="w-1/5 rounded-lg overflow-hidden relative cursor-pointer h-[160px] theme-gradient"
+
+
+
+          <!-- 右侧ChatGPT入口 -->
+            <div
+              class="w-1/5 rounded-3xl overflow-hidden relative cursor-pointer h-full bg-gradient-to-br from-purple-500 via-blue-500 to-indigo-600 hover:from-purple-600 hover:via-blue-600 hover:to-indigo-700 transition-all duration-500 shadow-2xl hover:shadow-3xl transform hover:scale-105 group"
               @click="router.push('/chatGPT')"
             >
-              <div class="p-3 flex flex-col h-full justify-between">
+              <!-- 装饰性背景动画 -->
+              <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
+              <div class="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full translate-y-12 -translate-x-12 group-hover:scale-125 transition-transform duration-700"></div>
+
+              <div class="relative z-10 p-6 flex flex-col h-full justify-between">
                 <div>
-                  <h3 class="font-bold text-white mb-1">ChatGPT</h3>
-                  <p class="text-xs text-white/80 line-clamp-2">AI智能助手，解答你的问题</p>
+                  <h3 class="text-2xl font-bold text-white mb-3 group-hover:text-white/95 transition-colors drop-shadow-lg">ChatGPT</h3>
+                  <p class="text-sm text-white/90 line-clamp-3 leading-relaxed group-hover:text-white/95 transition-colors drop-shadow-md">AI智能助手，解答你的问题</p>
                 </div>
-                <div class="flex justify-end mt-4">
-                  <icon-tabler:robot class="w-16 h-16 text-white/30" />
+                <div class="flex justify-end items-end mt-6">
+                  <icon-tabler:robot class="w-20 h-20 text-white/20 group-hover:text-white/30 transition-all duration-500 group-hover:scale-110" />
                 </div>
               </div>
             </div>
@@ -395,80 +489,70 @@ const navigateToBanner = (item: any) => {
         </div>
       </div>
       <!-- banner end -->
-      
+
       <!-- 主要内容区域 -->
       <div class="px-4">
         <!-- 推荐歌单 -->
-        <div class="mt-4">
-          <div class="flex items-center mb-6 cursor-pointer group" @click="router.push('/playlist')">
-            <h2 class="text-2xl font-bold mr-2 group-hover:text-primary">推荐歌单</h2>
-            <icon-ep:arrow-right-bold class="text-xl group-hover:text-primary" />
+        <div class="bg-card backdrop-blur-md rounded-2xl p-6 border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl hover:bg-card/80 transition-all duration-300 hover:scale-[1.02]">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 drop-shadow-lg">推荐歌单</h2>
+            <icon-tabler:chevron-right class="text-gray-700 dark:text-gray-200 text-lg cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors hover:scale-110" @click="router.push('/playlist')" />
           </div>
-          <div class="grid grid-cols-6 gap-6">
+          <div class="grid grid-cols-6 gap-4">
             <div
               v-for="playlist in recommendeList"
               :key="playlist.id"
               @click="router.push(`/playlist/${playlist.id}`)"
-              class="group cursor-pointer transform transition-all duration-300 hover:shadow-xl hover:shadow-primary hover:-translate-y-1 rounded-lg"
+              class="rounded-xl bg-card backdrop-blur-md cursor-pointer hover:bg-card/80 transition-all p-3 flex flex-col items-center group hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-black/50 transform hover:-translate-y-1 hover:scale-105 duration-300 border border-white/30 dark:border-white/20"
             >
-              <div class="relative aspect-square rounded-lg overflow-hidden">
+              <div class="w-full aspect-square overflow-hidden rounded-lg mb-3 relative shadow-md">
                 <img
                   :src="playlist.coverImgUrl?.startsWith('http') ? playlist.coverImgUrl + '?param=330y330' : playlist.coverImgUrl"
                   :alt="playlist.name"
-                  class="w-full h-full object-cover transition duration-300 group-hover:scale-110"
+                  class="w-full h-full object-cover group-hover:scale-110 transition duration-300"
                 />
-                <div
-                  class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"
-                />
-                <div
-                  class="absolute top-1 right-2 flex items-center space-x-1 text-white"
-                >
-                  <icon-ic:outline-remove-red-eye />
-                  <span class="text-sm">{{ playlist.playCount }}</span>
+                <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center rounded-lg">
+                  <icon-tabler:player-play class="text-white text-lg drop-shadow-lg" />
                 </div>
-                <div class="absolute bottom-2 left-0 right-0">
-                  <h3
-                    class="px-3 text-sm font-medium text-white z-10 line-clamp-2"
-                  >
-                    {{ playlist.name }}
-                  </h3>
+                <div class="absolute top-2 right-2 flex items-center space-x-1 text-white text-xs bg-black/40 backdrop-blur-sm rounded-full px-2 py-1 drop-shadow-lg">
+                  <icon-ic:outline-remove-red-eye class="text-xs" />
+                  <span>{{ playlist.playCount }}</span>
                 </div>
               </div>
+              <span class="text-xs line-clamp-2 text-center font-medium text-gray-900 dark:text-gray-100 drop-shadow-lg group-hover:text-gray-900 dark:group-hover:text-white transition-colors leading-tight">{{ playlist.name }}</span>
             </div>
           </div>
         </div>
-        
+
         <!-- 增加排行榜区域 -->
-        <div class="mt-12">
-          <h2 class="text-2xl font-bold mb-6">音乐排行榜</h2>
-          <div class="grid grid-cols-3 gap-6">
+        <div class="mt-8 bg-card backdrop-blur-md rounded-2xl p-6 border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl hover:bg-card/80 transition-all duration-300 hover:scale-[1.02]">
+          <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 drop-shadow-lg mb-4">音乐排行榜</h2>
+          <div class="grid grid-cols-3 gap-4">
             <div
               v-for="chart in charts"
               :key="chart.id"
-              class="backdrop-blur-sm rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 hover:bg-gray-100/10 dark:hover:bg-gray-800/20"
+              class="bg-card backdrop-blur-md rounded-xl p-4 shadow-md hover:shadow-lg transition-all duration-300 hover:bg-card/80 border border-white/30 dark:border-white/20 hover:scale-105"
             >
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold">{{ chart.title }}</h3>
-                <span class="text-sm text-gray-500"
-                  >更新时间: {{ chart.updateTime }}</span
-                >
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-base font-bold text-gray-900 dark:text-gray-100 drop-shadow-lg">{{ chart.title }}</h3>
+                <span class="text-xs text-gray-700 dark:text-gray-200">{{ chart.updateTime }}</span>
               </div>
-              <div class="">
+              <div class="space-y-1">
                 <div
                   v-for="(song, index) in chart.songs"
                   :key="index"
                   @dblclick="handlePlaylclick(song)"
-                  class="flex p-2 items-center space-x-3 hover:bg-gray-100/30 dark:hover:bg-gray-700/30 rounded-md transition-all duration-300 transform hover:translate-x-1 hover:shadow-sm cursor-pointer"
+                  class="flex p-2 items-center space-x-3 hover:bg-white/30 dark:hover:bg-black/30 rounded-lg transition-all duration-200 cursor-pointer group hover:scale-105"
                 >
                   <span
-                    class="text-lg font-bold"
-                    :class="index < 3 ? 'text-primary' : 'text-gray-400'"
+                    class="text-sm font-bold w-6 text-center drop-shadow-md"
+                    :class="index < 3 ? 'text-yellow-400' : 'text-gray-700 dark:text-gray-200'"
                     >{{ index + 1 }}</span
                   >
-                  <div class="flex-1">
-                    <h4 class="font-medium truncate">{{ song.name }}</h4>
-                    <p class="text-sm text-gray-500 truncate">
-                      {{ song.ar.map((item) => item.name).join() }}
+                  <div class="flex-1 min-w-0">
+                    <h4 class="font-medium truncate text-sm text-gray-900 dark:text-gray-100 drop-shadow-lg group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{{ song.name }}</h4>
+                    <p class="text-xs text-gray-700 dark:text-gray-200 truncate">
+                      {{ song.ar.map((item) => item.name).join(', ') }}
                     </p>
                   </div>
                 </div>
@@ -476,27 +560,27 @@ const navigateToBanner = (item: any) => {
             </div>
           </div>
         </div>
-        <div class="mt-12 mb-24">
-          <div class="flex items-center mb-6 cursor-pointer group" @click="router.push('/artist')">
-            <h2 class="text-2xl font-bold mr-2 group-hover:text-primary">热门歌手</h2>
-            <icon-ep:arrow-right-bold class="text-xl group-hover:text-primary" />
+        <div class="mt-8 mb-24 bg-card backdrop-blur-md rounded-2xl p-6 border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl hover:bg-card/80 transition-all duration-300 hover:scale-[1.02]">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 drop-shadow-lg">热门歌手</h2>
+            <icon-tabler:chevron-right class="text-gray-700 dark:text-gray-200 text-lg cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors hover:scale-110" @click="router.push('/artist')" />
           </div>
-          <div class="grid grid-cols-6 gap-6">
+          <div class="grid grid-cols-6 gap-4">
             <div
               v-for="artist in artists"
               :key="artist.id"
-              class="text-center group cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-primary"
+              class="text-center group cursor-pointer transform transition-all duration-300 hover:-translate-y-1 hover:scale-105 bg-card backdrop-blur-md rounded-xl p-3 hover:bg-card/80 hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-black/50 border border-white/30 dark:border-white/20"
               @click="router.push(`/artist/${artist.id}`)"
             >
-              <div class="aspect-square rounded-full overflow-hidden mb-3">
+              <div class="aspect-square rounded-full overflow-hidden mb-3 shadow-md">
                 <img
                   :src="artist.avatar + '?param=330y330'"
                   :alt="artist.name"
                   class="w-full h-full object-cover transition duration-300 group-hover:scale-110"
                 />
               </div>
-              <h3 class="font-medium group-hover:text-primary transition-colors">{{ artist.name }}</h3>
-              <p class="text-sm text-gray-500">{{ artist.fans }} 粉丝</p>
+              <h3 class="font-medium text-gray-900 dark:text-gray-100 drop-shadow-lg group-hover:text-gray-900 dark:group-hover:text-white transition-colors text-sm">{{ artist.name }}</h3>
+              <p class="text-xs text-gray-700 dark:text-gray-200">{{ artist.fans }} 粉丝</p>
             </div>
           </div>
         </div>
@@ -514,6 +598,83 @@ const navigateToBanner = (item: any) => {
 /* 排行榜悬停效果 */
 .backdrop-blur-sm {
   transition: all 0.3s ease;
+}
+
+/* 轮播指示器现代化动画效果 */
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.4);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes indicator-glow {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.6), 0 0 20px rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 255, 255, 0.6);
+  }
+}
+
+@keyframes progress-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 指示器形状变换动画 */
+@keyframes morphToRect {
+  0% {
+    border-radius: 50%;
+    transform: scale(1);
+  }
+  100% {
+    border-radius: 20%;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes morphToCircle {
+  0% {
+    border-radius: 20%;
+    transform: scale(1.1);
+  }
+  100% {
+    border-radius: 50%;
+    transform: scale(1);
+  }
+}
+
+/* 指示器状态样式 */
+.indicator-active {
+  animation: indicator-glow 3s ease-in-out infinite;
+}
+
+.progress-ring {
+  animation: progress-ring 4s linear infinite;
+}
+
+/* 指示器悬停时的光晕效果 */
+.group:hover .absolute.inset-0 {
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+}
+
+/* 毛玻璃效果增强 */
+.backdrop-blur-xl {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .backdrop-blur-sm:hover {

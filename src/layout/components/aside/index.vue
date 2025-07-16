@@ -44,16 +44,16 @@ const asideStyle = computed(() => {
         :key="index"
         class="w-full flex flex-col gap-1"
       >
-        <h3 class="text-xs font-semibold text-inactive">
+        <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-200">
           {{ item.title }}
         </h3>
         <router-link
-          class="rounded-lg w-full transition text-sm duration-300 py-2 px-2 flex items-center space-x-2 text-primary-foreground hover:bg-gray-100/30 dark:hover:bg-gray-700/30 hover:shadow-sm transform hover:translate-x-1"
+          class="rounded-lg w-full transition text-sm duration-300 py-2 px-2 flex items-center space-x-2 text-gray-900 dark:text-gray-100 hover:bg-gray-100/30 dark:hover:bg-gray-700/30 hover:shadow-sm transform hover:translate-x-1"
           :to="item2.router"
           v-for="(item2, index2) in item.children"
           :key="index2"
         >
-          <Icon :name="item2.icon" :size="18" class="text-primary" />
+          <Icon :name="item2.icon" :size="18" class="text-gray-700 dark:text-gray-200" />
           <span>{{ item2.title }}</span>
         </router-link>
       </div>
@@ -62,12 +62,12 @@ const asideStyle = computed(() => {
         class="w-full flex flex-col gap-1 overflow-x-hidden"
         v-if="user.userInfo.userId"
       >
-        <h3 class="text-xs font-semibold text-inactive">我的歌单</h3>
+        <h3 class="text-xs font-semibold text-gray-700 dark:text-gray-200">我的歌单</h3>
         <el-scrollbar class="flex-1">
           <router-link
             v-for="item in userPlay"
             :key="item.id"
-            class="rounded-lg w-full transition text-sm duration-300 py-2 px-2 flex items-center space-x-2 text-primary-foreground hover:bg-gray-100/30 dark:hover:bg-gray-700/30 hover:shadow-sm transform hover:translate-x-1"
+            class="rounded-lg w-full transition text-sm duration-300 py-2 px-2 flex items-center space-x-2 text-gray-900 dark:text-gray-100 hover:bg-gray-100/30 dark:hover:bg-gray-700/30 hover:shadow-sm transform hover:translate-x-1"
             :to="`/playlist/${item.id}`"
           >
             <el-image

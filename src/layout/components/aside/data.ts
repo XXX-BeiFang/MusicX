@@ -25,6 +25,11 @@ export const MenuData = [
                 icon: 'Avatar',
                 router: '/artist',
             },
+            {
+                title: '排行榜',
+                icon: 'TrendCharts',
+                router: '/charts',
+            },
         ],
     },
     {
@@ -39,6 +44,11 @@ export const MenuData = [
                 title: '图标示例',
                 icon: 'Collection',
                 router: '/utils'
+            },
+            {
+                title: '主题动画',
+                icon: 'Sunny',
+                router: '/theme-demo'
             },
         ],
     },

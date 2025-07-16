@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import * as Avatar from './components/avatar.vue'
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import * as ThemeSelector from '@/components/ThemeSelector.vue'
 import { settingStore } from '@/stores/modules/setting'
+import { isDarkMode, toggleTheme } from '@/composables/useTheme'
 
 const route = useRoute()
 const router = useRouter()
 const setting = settingStore()
 
 const searchText = ref('')
-const isDark = ref(false)
 
 // 赋值到搜索框
 watch(
@@ -22,24 +22,6 @@ watch(
   },
   { immediate: true }
 )
-
-const toggleTheme = () => {
-  isDark.value = !isDark.value
-  document.documentElement.classList.toggle('dark', isDark.value)
-  // 可选：本地存储用户选择
-  localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
-}
-
-onMounted(() => {
-  // 初始化时根据本地存储或当前 class 设置
-  const saved = localStorage.getItem('theme')
-  if (saved) {
-    isDark.value = saved === 'dark'
-    document.documentElement.classList.toggle('dark', isDark.value)
-  } else {
-    isDark.value = document.documentElement.classList.contains('dark')
-  }
-})
 
 // 计算头部样式
 const headerStyle = computed(() => {
@@ -83,8 +65,8 @@ const headerStyle = computed(() => {
       </div>
       <!-- 主题选择器 -->
       <ThemeSelector.default />
-      <el-button text circle @click="toggleTheme">
-        <Icon :icon="isDark ? 'mdi:weather-sunny' : 'mdi:weather-night'" class="theme-icon" />
+      <el-button text circle @click="(event) => toggleTheme(event)">
+        <Icon :icon="isDarkMode ? 'mdi:weather-sunny' : 'mdi:weather-night'" class="theme-icon" />
       </el-button>
       <Avatar.default />
     </div>

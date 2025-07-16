@@ -495,8 +495,13 @@ const navigateToBanner = (item: any) => {
         <!-- 推荐歌单 -->
         <div class="bg-card backdrop-blur-md rounded-2xl p-6 border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl hover:bg-card/80 transition-all duration-300 hover:scale-[1.02]">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 drop-shadow-lg">推荐歌单</h2>
-            <icon-tabler:chevron-right class="text-gray-700 dark:text-gray-200 text-lg cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors hover:scale-110" @click="router.push('/playlist')" />
+            <div
+              class="flex items-center gap-2 cursor-pointer group transition-all duration-300"
+              @click="router.push('/playlist')"
+            >
+              <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 drop-shadow-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">推荐歌单</h2>
+              <icon-tabler:chevron-right class="text-gray-600 dark:text-gray-400 text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all duration-300 group-hover:scale-110 group-hover:translate-x-1" />
+            </div>
           </div>
           <div class="grid grid-cols-6 gap-4">
             <div
@@ -562,8 +567,13 @@ const navigateToBanner = (item: any) => {
         </div>
         <div class="mt-8 mb-24 bg-card backdrop-blur-md rounded-2xl p-6 border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl hover:bg-card/80 transition-all duration-300 hover:scale-[1.02]">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 drop-shadow-lg">热门歌手</h2>
-            <icon-tabler:chevron-right class="text-gray-700 dark:text-gray-200 text-lg cursor-pointer hover:text-gray-900 dark:hover:text-white transition-colors hover:scale-110" @click="router.push('/artist')" />
+            <div
+              class="flex items-center gap-2 cursor-pointer group transition-all duration-300"
+              @click="router.push('/artist')"
+            >
+              <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100 drop-shadow-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">热门歌手</h2>
+              <icon-tabler:chevron-right class="text-gray-600 dark:text-gray-400 text-lg group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-all duration-300 group-hover:scale-110 group-hover:translate-x-1" />
+            </div>
           </div>
           <div class="grid grid-cols-6 gap-4">
             <div

@@ -25,7 +25,7 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
     "@types/node": "^22.10.5",
-    "@vueuse/core": "^12.5.0",
+    "@vueuse/core": "^12.8.2",
     "artplayer": "^5.2.2",
     "axios": "^1.7.9",
     "element-plus": "^2.9.3",

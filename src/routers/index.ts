@@ -61,6 +61,14 @@ const router = createRouter({
       path: '/playlist/:id',
       component: () => import('@/pages/playlist/[id].vue'),
     },
+    {
+      path: '/theme-demo',
+      component: () => import('@/pages/theme-demo.vue'),
+    },
+    {
+      path: '/charts',
+      component: () => import('@/pages/charts/index.vue'),
+    },
   ],
 })
 

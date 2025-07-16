@@ -6,6 +6,31 @@ body,
   font-family: 'hanyi', sans-serif !important;
 }
 
+/* View Transitions API 暗黑模式切换动画 */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* 进入dark模式和退出dark模式时，两个图像的位置顺序正好相反 */
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2147483646;
+}
+
+/* 根据dark类修改 */
+.dark::view-transition-old(root) {
+  z-index: 2147483646;
+}
+
+.dark::view-transition-new(root) {
+  z-index: 1;
+}
+
 :root {
   --primary: #8b5cf6; /* 默认紫色 */
   --primary-rgb: 139, 92, 246; /* RGB 格式 */

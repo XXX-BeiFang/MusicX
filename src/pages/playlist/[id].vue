@@ -10,8 +10,16 @@ watch(
   async (id) => {
     if (id) {
       playlist.value = null
-      const res = await playlistDetail(id as string)
-      playlist.value = res.playlist
+      try {
+        const res = await playlistDetail(id as string)
+        playlist.value = res.playlist
+      } catch (error: any) {
+        console.error('获取歌单详情失败:', error)
+        // 如果是404错误，可以显示友好的错误信息
+        if (error.response?.status === 404) {
+          console.warn(`歌单 ${id} 不存在或已被删除`)
+        }
+      }
     }
   },
   { immediate: true }

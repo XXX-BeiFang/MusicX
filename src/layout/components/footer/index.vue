@@ -3,8 +3,10 @@ import * as Left from './components/left.vue'
 import * as Center from './components/center.vue'
 import * as Right from './components/right.vue'
 import { settingStore } from '@/stores/modules/setting'
+import * as LyricsPage from '@/components/LyricsPage/index.vue'
 
 const setting = settingStore()
+const showLyricsPage = ref(false)
 
 // 计算底部播放器样式
 const footerStyle = computed(() => {
@@ -16,16 +18,24 @@ const footerStyle = computed(() => {
   }
   return {}
 })
+
+// 打开歌词页面
+const openLyricsPage = () => {
+  showLyricsPage.value = true
+}
 </script>
 <template>
   <footer class="border-t flex items-center justify-between player-footer" :style="footerStyle">
     <!-- 左边：歌曲封面和歌曲名称 -->
-    <Left.default />
+    <Left.default @openLyrics="openLyricsPage" />
     <!-- 中间：控制区 -->
-    <Center.default />
+    <Center.default @openLyrics="openLyricsPage" />
     <!-- 右边：历史播放和音量 -->
     <Right.default />
   </footer>
+
+  <!-- 歌词页面 -->
+  <LyricsPage.default v-if="showLyricsPage" v-model="showLyricsPage" />
 </template>
 
 <style scoped>

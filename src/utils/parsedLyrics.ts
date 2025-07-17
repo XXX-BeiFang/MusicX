@@ -1,11 +1,12 @@
 import { API } from "@/api/interface";
+import { safeSplit, safeGet, validateApiResponse, createDefaultLyricsData, logError } from './errorHandler';
 export interface LyricLine {
     time: number // 歌词对应的时间（毫秒）
     lrc: string // 歌词文本
 }
 export interface MergedLyricLine extends LyricLine {
     tlyric?: string // 可选的翻译文本
-    romaLrc?: string // 可选的罗马音歌词
+    romalrc?: string // 可选的罗马音歌词
 }
 
 interface LyricUser {
@@ -25,8 +26,10 @@ export interface LyricData {
 }
 
 export function parseLyrics(lyricString: string): LyricLine[] {
-    const lines = lyricString.split('\n')
-    const parsedLines: LyricLine[] = []
+    try {
+        // 使用安全的split方法，防止null错误
+        const lines = safeSplit(lyricString, '\n')
+        const parsedLines: LyricLine[] = []
 
     lines.forEach((line) => {
         const matches = [...line.matchAll(/\[(\d{2}):(\d{2})\.(\d{2,3})\]/g)]
@@ -47,15 +50,25 @@ export function parseLyrics(lyricString: string): LyricLine[] {
     })
 
     return parsedLines
+    } catch (error) {
+        logError(error, 'parseLyrics')
+        return []
+    }
 }
 
 export function parseAndMergeLyrics(lyrics: API.LyricsResponse): LyricData {
-    const { lyricUser, transUser, lrc, tlyric, romalrc } = lyrics
+    try {
+        // 验证API响应数据格式
+        if (!validateApiResponse(lyrics)) {
+            return createDefaultLyricsData('歌词数据无效')
+        }
 
-    // 解析原歌词、翻译歌词和罗马音歌词
-    const originalParsed: LyricLine[] = parseLyrics(lrc?.lyric ?? '') || []
-    const translatedParsed: LyricLine[] = parseLyrics(tlyric?.lyric ?? '') || []
-    const romaParsed: LyricLine[] = parseLyrics(romalrc?.lyric ?? '') || []
+        const { lyricUser, transUser, lrc, tlyric, romalrc } = lyrics
+
+        // 使用安全的属性访问解析歌词
+        const originalParsed: LyricLine[] = parseLyrics(safeGet(lrc, 'lyric', '')) || []
+        const translatedParsed: LyricLine[] = parseLyrics(safeGet(tlyric, 'lyric', '')) || []
+        const romaParsed: LyricLine[] = parseLyrics(safeGet(romalrc, 'lyric', '')) || []
 
     // 备注信息，如果 originalParsed 为空，将 lrc.lyric 作为备注显示
     let remark = ''
@@ -78,7 +91,7 @@ export function parseAndMergeLyrics(lyrics: API.LyricsResponse): LyricData {
         return {
             ...lyric,
             tlyric: translation?.lrc,
-            romaLrc: romaLrc?.lrc,
+            romalrc: romaLrc?.lrc,
         }
     })
 
@@ -92,5 +105,9 @@ export function parseAndMergeLyrics(lyrics: API.LyricsResponse): LyricData {
         lyricUser: lyricUser || '',
         transUser: transUser || '',
         remark,
+    }
+    } catch (error) {
+        logError(error, 'parseAndMergeLyrics')
+        return createDefaultLyricsData('歌词解析失败')
     }
 }

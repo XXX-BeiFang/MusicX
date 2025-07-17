@@ -22,14 +22,6 @@ const router = createRouter({
       component: () => import('@/pages/chatGPT/index.vue'),
     },
     {
-      path: '/utils',
-      component: () => import('@/pages/utils/index.vue'),
-    },
-    {
-      path: '/chatGPT',
-      component: () => import('@/pages/chatGPT/index.vue'),
-    },
-    {
       path: '/setting',
       component: () => import('@/pages/setting/index.vue'),
     },
@@ -61,10 +53,7 @@ const router = createRouter({
       path: '/playlist/:id',
       component: () => import('@/pages/playlist/[id].vue'),
     },
-    {
-      path: '/theme-demo',
-      component: () => import('@/pages/theme-demo.vue'),
-    },
+
     {
       path: '/charts',
       component: () => import('@/pages/charts/index.vue'),

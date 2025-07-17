@@ -1,4 +1,4 @@
-import { ParsedLyrics } from "@/utils/parsedLyrics";
+import { LyricData } from "@/utils/parsedLyrics";
 /* UserState */
 export interface UserState {
     userInfo: Partial<userModel> // 用户信息
@@ -26,7 +26,7 @@ export interface trackModel {
     cover: string; // 封面
     url: string; // 音频地址
     duration: number; // 时长
-    lyrics?: ParsedLyrics; // 歌词
+    lyrics?: LyricData; // 歌词
 }
 
 /* MenuState */
@@ -43,6 +43,7 @@ export interface SettingState {
     language: string | null // 当前系统语言
     themeColor: string // 主题颜色
     themeColorName: string // 主题颜色名称
+    isDarkMode: boolean // 是否为深色模式
     wallpaper: string | null // 壁纸图片路径
     wallpaperType: 'preset' | 'custom' | 'none' | 'color' // 壁纸类型：预设、自定义、无、颜色
     wallpaperOpacity: number // 壁纸透明度

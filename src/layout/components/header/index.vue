@@ -2,13 +2,17 @@
 import { Icon } from '@iconify/vue'
 import * as Avatar from './components/avatar.vue'
 import { ref } from 'vue'
-import * as ThemeSelector from '@/components/ThemeSelector.vue'
+import ThemeSelector from '@/components/ThemeSelector.vue'
 import { settingStore } from '@/stores/modules/setting'
-import { isDarkMode, toggleTheme } from '@/composables/useTheme'
+import { useDarkModeTransition } from '@/hooks/useDarkModeTransition'
+import { getCurrentThemeIcon, getThemeIconSize } from '@/utils/themeIcons'
 
 const route = useRoute()
 const router = useRouter()
 const setting = settingStore()
+
+// 深色模式切换
+const { isDark, toggleTheme } = useDarkModeTransition()
 
 const searchText = ref('')
 
@@ -64,10 +68,23 @@ const headerStyle = computed(() => {
         />
       </div>
       <!-- 主题选择器 -->
-      <ThemeSelector.default />
-      <el-button text circle @click="(event) => toggleTheme(event)">
-        <Icon :icon="isDarkMode ? 'mdi:weather-sunny' : 'mdi:weather-night'" class="theme-icon" />
-      </el-button>
+      <ThemeSelector />
+
+      <!-- 深色模式切换按钮 -->
+      <button
+        @click="toggleTheme($event)"
+        class="group relative w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-300 flex items-center justify-center text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95"
+        :class="{ 'text-blue-600 dark:text-blue-400': isDark }"
+        :title="isDark ? '切换到浅色模式' : '切换到深色模式'"
+      >
+        <!-- 背景光效 -->
+        <div class="absolute inset-0 rounded-full bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <Icon
+          :icon="getCurrentThemeIcon(isDark)"
+          :class="[getThemeIconSize(), 'relative z-10 transition-transform duration-200 group-hover:scale-110']"
+        />
+      </button>
+
       <Avatar.default />
     </div>
   </header>

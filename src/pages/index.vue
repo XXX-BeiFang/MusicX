@@ -9,6 +9,8 @@ import {
   banner,
 } from '@/api'
 import rootGedanImg from '@/assets/root_gedan.jpg'
+import { Icon } from '@iconify/vue'
+
 type ChartItem = {
   id: number
   title: string
@@ -89,26 +91,55 @@ const handleIndicatorLeave = () => {
   isPaused.value = false // 恢复自动轮播
 }
 
+// 加载状态
+const isLoading = ref(true)
+const loadingError = ref<string | null>(null)
+
 // 页面挂载时初始化数据
 onMounted(async () => {
+  isLoading.value = true
+  loadingError.value = null
+
   try {
-    // 获取轮播图数据
-    const bannerData: any = await banner()
-    if (bannerData && bannerData.banners) {
-      bannerList.value = bannerData.banners.slice(0, 12) // 取前12个轮播图
-      // 启动自动轮播
-      nextTick(() => {
-        startAutoPlay()
-      })
+    // 并行获取轮播图和个性化推荐数据
+    const [bannerResult, personalizedResult] = await Promise.allSettled([
+      banner(),
+      personalized({ limit: 8 })
+    ])
+
+    // 处理轮播图数据
+    if (bannerResult.status === 'fulfilled') {
+      const bannerData = bannerResult.value as any
+      if (bannerData && bannerData.banners && Array.isArray(bannerData.banners)) {
+        bannerList.value = bannerData.banners.slice(0, 12) // 取前12个轮播图
+        // 启动自动轮播
+        nextTick(() => {
+          startAutoPlay()
+        })
+      } else {
+        console.warn('轮播图数据格式异常:', bannerData)
+      }
+    } else {
+      console.warn('获取轮播图失败:', bannerResult.reason)
     }
 
-    // 获取个性化推荐数据(猜你喜欢)
-    const { result } = await personalized({ limit: 8 })
-    if (Array.isArray(result) && result.length > 0) {
-      personalizedList.value = result.slice(0, 4) // 取前4个推荐
+    // 处理个性化推荐数据
+    if (personalizedResult.status === 'fulfilled') {
+      const personalizedData = personalizedResult.value as any
+      if (personalizedData && personalizedData.result && Array.isArray(personalizedData.result)) {
+        personalizedList.value = personalizedData.result.slice(0, 4) // 取前4个推荐
+      } else {
+        console.warn('个性化推荐数据格式异常:', personalizedData)
+      }
+    } else {
+      console.warn('获取个性化推荐失败:', personalizedResult.reason)
     }
+
   } catch (error) {
-    console.error('获取banner或个性化推荐失败:', error)
+    console.error('初始化数据失败:', error)
+    loadingError.value = '数据加载失败，请刷新页面重试'
+  } finally {
+    isLoading.value = false
   }
 
   // 获取推荐歌单
@@ -210,17 +241,23 @@ onMounted(async () => {
     ]
 
     // 批量获取榜单数据
-    Promise.all(
-      chartConfigs.map(({ id }) => playlistTrackAll({ id, limit: 10 }))
-    ).then((results) => {
-      results.forEach((res: any, i: number) => {
+    const chartPromises = chartConfigs.map(async ({ id, index }) => {
+      try {
+        const res: any = await playlistTrackAll({ id, limit: 10 })
         if (res && res.songs) {
-          charts.value[chartConfigs[i].index].songs = res.songs
+          charts.value[index].songs = res.songs
         }
-      })
-    }).catch((error) => {
-      console.error('获取榜单数据失败:', error)
+      } catch (error: any) {
+        console.error(`获取榜单 ${id} 数据失败:`, error)
+        // 如果是404错误，设置空数组避免界面异常
+        if (error.response?.status === 404) {
+          charts.value[index].songs = []
+        }
+      }
     })
+
+    // 等待所有榜单数据加载完成
+    await Promise.allSettled(chartPromises)
   } catch (error) {
     console.error('获取其他数据失败:', error)
   }
@@ -349,7 +386,32 @@ const navigateToBanner = (item: any) => {
 
 <template>
   <div class="flex p-4 w-full">
-    <div class="flex-1">
+    <!-- 加载状态 -->
+    <div v-if="isLoading" class="flex-1 flex items-center justify-center min-h-[400px]">
+      <div class="text-center">
+        <div class="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-lg text-muted-foreground">正在加载精彩内容...</p>
+      </div>
+    </div>
+
+    <!-- 错误状态 -->
+    <div v-else-if="loadingError" class="flex-1 flex items-center justify-center min-h-[400px]">
+      <div class="text-center">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Icon icon="material-symbols:error-outline" class="w-8 h-8 text-red-500" />
+        </div>
+        <p class="text-lg text-red-600 mb-4">{{ loadingError }}</p>
+        <button
+          @click="location.reload()"
+          class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/80 transition-colors"
+        >
+          重新加载
+        </button>
+      </div>
+    </div>
+
+    <!-- 主要内容 -->
+    <div v-else class="flex-1">
       <!-- 现代化音乐轮播区域 -->
       <div class="w-full flex flex-col overflow-hidden">
         <div class="bg-card backdrop-blur-md rounded-2xl p-6 mb-8 border border-white/30 dark:border-white/20 shadow-xl hover:shadow-2xl hover:bg-card/80 transition-all duration-300 hover:scale-[1.02]">

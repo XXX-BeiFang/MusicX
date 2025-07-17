@@ -11,6 +11,14 @@ const {
   togglePlayPause,
   seek,
 } = useAudioPlayer()
+
+// 定义事件发射器，用于与父组件通信
+const emit = defineEmits(['openLyrics'])
+
+// 点击进度条区域打开歌词页面
+const openLyricsPage = () => {
+  emit('openLyrics')
+}
 </script>
 <template>
   <div class="flex items-center flex-1">
@@ -40,7 +48,7 @@ const {
         <Icon name="Star" :size="18" color="#ef4444" />
       </button>
     </div>
-    <div class="w-full flex items-center space-x-2">
+    <div class="w-full flex items-center space-x-2 cursor-pointer" @click="openLyricsPage">
       <el-slider
         v-model="currentTime"
         :step="1"
@@ -49,6 +57,7 @@ const {
         :max="duration"
         class="w-full"
         size="small"
+        @click.stop
       />
       <span class="text-xs">{{ formatTime(currentTime) }}</span>
       <span> / </span>

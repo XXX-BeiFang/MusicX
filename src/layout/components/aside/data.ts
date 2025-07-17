@@ -40,16 +40,6 @@ export const MenuData = [
                 icon: 'ChatDotRound',
                 router: '/chatGPT',
             },
-            {
-                title: '图标示例',
-                icon: 'Collection',
-                router: '/utils'
-            },
-            {
-                title: '主题动画',
-                icon: 'Sunny',
-                router: '/theme-demo'
-            },
         ],
     },
     {

@@ -1,13 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, defineComponent, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { onClickOutside } from '@vueuse/core';
 import { settingStore } from '@/stores/modules/setting';
 import ColorPicker from '@/components/ColorPicker.vue';
-
-// 默认导出组件
-defineComponent({
-  name: 'ThemeSelector'
-});
 
 const settings = settingStore();
 const themePanel = ref(null);

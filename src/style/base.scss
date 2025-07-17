@@ -22,12 +22,12 @@ body,
   z-index: 2147483646;
 }
 
-/* 根据dark类修改 */
-.dark::view-transition-old(root) {
+/* 根据data-bs-theme属性修改 */
+[data-bs-theme="dark"]::view-transition-old(root) {
   z-index: 2147483646;
 }
 
-.dark::view-transition-new(root) {
+[data-bs-theme="dark"]::view-transition-new(root) {
   z-index: 1;
 }
 

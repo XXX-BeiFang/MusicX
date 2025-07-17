@@ -16,6 +16,8 @@ export const settingStore = defineStore({
         // 主题颜色
         themeColor: '#8b5cf6', // 默认紫色
         themeColorName: '默认紫',
+        // 深色模式
+        isDarkMode: false, // 默认浅色模式
         // 壁纸设置
         wallpaper: null,
         wallpaperType: 'none',
@@ -55,6 +57,31 @@ export const settingStore = defineStore({
             };
 
             document.documentElement.style.setProperty('--primary-rgb', hexToRgb(color));
+        },
+
+        // 切换深色模式
+        toggleDarkMode() {
+            this.isDarkMode = !this.isDarkMode;
+            this.applyDarkMode();
+        },
+
+        // 设置深色模式
+        setDarkMode(isDark: boolean) {
+            this.isDarkMode = isDark;
+            this.applyDarkMode();
+        },
+
+        // 应用深色模式
+        applyDarkMode() {
+            if (this.isDarkMode) {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+            } else {
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+                document.documentElement.classList.add('light');
+                document.documentElement.classList.remove('dark');
+            }
         },
 
         // 设置壁纸

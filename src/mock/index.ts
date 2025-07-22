@@ -27,6 +27,8 @@ export const trackListData = [
             'http://p4.music.126.net/9KeyafHLjadqSQTRS_tN5Q==/5741649720318487.jpg',
         url: 'http://music.163.com/song/media/outer/url?id=27591651.mp3',
         duration: 149000,
+        mv: 5646424,
+        source: '网易云音乐',
         lyrics: {
             lines: [
                 { time: 0, lrc: '这是一首纯音乐', tlyric: 'This is instrumental music', romalrc: 'zhe shi yi shou chun yin yue' },
@@ -51,6 +53,8 @@ export const trackListData = [
             'http://p3.music.126.net/g7aakYG_Wfmrn1_IDfVUXA==/109951165050166241.jpg',
         url: 'http://music.163.com/song/media/outer/url?id=409872504.mp3',
         duration: 260675,
+        mv: null,
+        source: '网易云音乐',
         lyrics: {
             lines: [
                 { time: 0, lrc: '静寂の夜に響く', tlyric: '在寂静的夜晚响起', romalrc: 'seijaku no yoru ni hibiku' },
@@ -82,4 +86,6 @@ export const defaultSong = {
     cover: new URL(`@/assets/default_album.jpg`, import.meta.url).href,
     url: '',
     duration: 0,
+    mv: null,
+    source: '本地音乐'
 }

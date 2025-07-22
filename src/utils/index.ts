@@ -105,5 +105,7 @@ export const convertToTrackModel = (song: any) => {
         cover: song.al.picUrl || default_album,
         url: '',
         duration: song.dt,
+        mv: song.mv || null,
+        source: '网易云音乐'
     }
 }

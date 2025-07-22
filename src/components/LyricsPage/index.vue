@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted, Transition } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { formatTime } from '@/utils'
 import { settingStore } from '@/stores/modules/setting'
 import { Icon } from '@iconify/vue'
 import { ElScrollbar, ElIcon } from 'element-plus'
-import { Timer, EditPen, Brush, Plus, Minus, Check, RefreshRight, Mouse, VideoPlay, VideoPause, Back, Right, Refresh, Sort, Star, Share, Setting, Mute, Microphone, Close } from '@element-plus/icons-vue'
+import { Timer, EditPen, Brush, Plus, Minus, Check, RefreshRight, Mouse, VideoPlay, VideoPause, Back, Right, Refresh, Sort, Star, Share, Setting, Mute, Microphone, Close, ArrowDown } from '@element-plus/icons-vue'
 import { useAudioPlayer } from '@/hooks/useAudioPlayer'
 import { useDarkModeTransition } from '@/hooks/useDarkModeTransition'
 import { getCurrentThemeIcon, getThemeIconSize } from '@/utils/themeIcons'
@@ -142,6 +142,38 @@ function handleIconError() {
   iconError.value = true
 }
 
+// 跳转到MV页面
+const router = useRouter()
+function goToMV() {
+  if (currentTrack.value.mv && currentTrack.value.mv !== 0) {
+    router.push(`/mv/${currentTrack.value.mv}`)
+  }
+}
+
+// 获取播放来源
+function getPlaySource() {
+  // 优先使用 source 字段
+  if (currentTrack.value.source) {
+    return currentTrack.value.source
+  }
+
+  // 如果没有 source 字段，根据URL判断播放来源
+  const url = currentTrack.value.url || ''
+  if (url.includes('music.163.com') || url.includes('netease')) {
+    return '网易云音乐'
+  } else if (url.includes('qq.com') || url.includes('tencent')) {
+    return 'QQ音乐'
+  } else if (url.includes('kugou.com')) {
+    return '酷狗音乐'
+  } else if (url.includes('kuwo.cn')) {
+    return '酷我音乐'
+  } else if (url.includes('xiami.com')) {
+    return '虾米音乐'
+  } else {
+    return '本地音乐'
+  }
+}
+
 
 
 // 跳转到指定歌词行
@@ -234,6 +266,27 @@ watch(
 // 关闭歌词页面
 const closeLyricsPage = () => {
   showLyricsPage.value = false
+}
+
+// 动画事件处理
+const onBeforeEnter = () => {
+  // 动画开始前的准备工作
+  document.body.style.overflow = 'hidden'
+}
+
+const onAfterEnter = () => {
+  // 动画完成后的清理工作
+  document.body.style.overflow = ''
+}
+
+const onBeforeLeave = () => {
+  // 离开动画开始前的准备工作
+  document.body.style.overflow = 'hidden'
+}
+
+const onAfterLeave = () => {
+  // 离开动画完成后的清理工作
+  document.body.style.overflow = ''
 }
 
 // 键盘快捷键支持
@@ -478,24 +531,35 @@ const backgroundStyle = computed(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 lyrics-page-container bg-white dark:bg-gray-900">
+  <Transition
+    name="drawer"
+    appear
+    @before-enter="onBeforeEnter"
+    @after-enter="onAfterEnter"
+    @before-leave="onBeforeLeave"
+    @after-leave="onAfterLeave"
+  >
+    <div
+      v-if="showLyricsPage"
+      class="fixed inset-0 z-50 lyrics-page-container bg-white dark:bg-gray-900"
+    >
     <!-- 主要内容区域 -->
     <div class="h-full flex flex-col">
       <!-- 顶部导航栏 -->
-      <header class="flex items-center justify-between px-8 py-6 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-        <div class="flex items-center gap-4">
+      <header class="relative flex items-center justify-between px-8 py-6 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+        <!-- 左侧返回按钮 -->
+        <div class="flex items-center">
           <button
             @click="closeLyricsPage"
             class="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
-            <Icon icon="material-symbols:arrow-back-ios" class="text-lg" />
+            <el-icon class="text-xl">
+              <ArrowDown />
+            </el-icon>
           </button>
-          <div>
-            <h1 class="text-lg font-medium text-gray-900 dark:text-white">{{ currentTrack.title }}</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ currentTrack.artist }}</p>
-          </div>
         </div>
 
+        <!-- 右侧按钮组 -->
         <div class="flex items-center gap-3">
           <!-- 主题切换按钮 -->
           <button
@@ -561,7 +625,57 @@ const backgroundStyle = computed(() => {
         <!-- 左侧：专辑封面区域 -->
         <div class="w-1/3 flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-900">
           <!-- 专辑封面 - 黑胶唱片效果 -->
-          <div class="relative mb-6">
+          <div class="relative mb-10">
+            <!-- 音波可视化特效系统 - 仅在播放时显示 -->
+            <div
+              v-if="isPlaying"
+              class="absolute inset-0 flex items-center justify-center pointer-events-none"
+            >
+              <!-- 背景光晕效果 -->
+              <div class="absolute inset-0 soundwave-glow-bg"></div>
+
+              <!-- 外层：低频慢波扩散 -->
+              <div class="absolute w-96 h-96 border-2 rounded-full soundwave-outer-1"></div>
+              <div class="absolute w-104 h-104 border-2 rounded-full soundwave-outer-2"></div>
+              <div class="absolute w-112 h-112 border rounded-full soundwave-outer-3"></div>
+              <div class="absolute w-120 h-120 border rounded-full soundwave-outer-4"></div>
+
+              <!-- 中层：中频波动效果 -->
+              <div class="absolute w-80 h-80 border-2 rounded-full soundwave-mid-1"></div>
+              <div class="absolute w-88 h-88 border-2 rounded-full soundwave-mid-2"></div>
+              <div class="absolute w-72 h-72 border rounded-full soundwave-mid-3"></div>
+              <div class="absolute w-84 h-84 border rounded-full soundwave-mid-4"></div>
+
+              <!-- 内层：高频快速波纹 -->
+              <div class="absolute w-64 h-64 border-2 rounded-full soundwave-inner-1"></div>
+              <div class="absolute w-68 h-68 border-2 rounded-full soundwave-inner-2"></div>
+              <div class="absolute w-60 h-60 border rounded-full soundwave-inner-3"></div>
+              <div class="absolute w-56 h-56 border rounded-full soundwave-inner-4"></div>
+
+              <!-- 频谱可视化条 -->
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="spectrum-visualizer">
+                  <div class="spectrum-bar spectrum-bar-1"></div>
+                  <div class="spectrum-bar spectrum-bar-2"></div>
+                  <div class="spectrum-bar spectrum-bar-3"></div>
+                  <div class="spectrum-bar spectrum-bar-4"></div>
+                  <div class="spectrum-bar spectrum-bar-5"></div>
+                  <div class="spectrum-bar spectrum-bar-6"></div>
+                  <div class="spectrum-bar spectrum-bar-7"></div>
+                  <div class="spectrum-bar spectrum-bar-8"></div>
+                </div>
+              </div>
+
+              <!-- 脉冲节拍效果 -->
+              <div class="absolute w-52 h-52 border-4 rounded-full pulse-beat-1"></div>
+              <div class="absolute w-48 h-48 border-2 rounded-full pulse-beat-2"></div>
+              <div class="absolute w-44 h-44 border rounded-full pulse-beat-3"></div>
+
+              <!-- 动态光环 -->
+              <div class="absolute w-76 h-76 rounded-full dynamic-ring-1"></div>
+              <div class="absolute w-92 h-92 rounded-full dynamic-ring-2"></div>
+              <div class="absolute w-108 h-108 rounded-full dynamic-ring-3"></div>
+            </div>
             <div
               class="vinyl-container w-64 h-64 overflow-hidden shadow-lg"
               :class="isPlaying ? 'rounded-full' : 'rounded-2xl'"
@@ -652,39 +766,7 @@ const backgroundStyle = computed(() => {
               </div>
             </div>
 
-            <!-- 播放状态指示器 -->
-            <div
-              class="absolute -bottom-3 -right-3"
-              :style="{
-                transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
-                opacity: isPlaying ? '1' : '0',
-                transform: isPlaying ? 'scale(1)' : 'scale(0)'
-              }"
-            >
-              <!-- 外圈脉冲效果 -->
-              <div class="absolute inset-0 w-14 h-14 bg-blue-500/20 rounded-full animate-ping"></div>
-              <div class="absolute inset-1 w-12 h-12 bg-blue-500/30 rounded-full animate-ping" style="animation-delay: 0.2s;"></div>
 
-              <!-- 主指示器 -->
-              <div class="relative w-14 h-14 bg-gradient-to-br from-blue-400 via-blue-500 to-blue-600 rounded-full flex items-center justify-center shadow-xl border-3 border-white/90 backdrop-blur-sm">
-                <!-- 内部光泽效果 -->
-                <div class="absolute inset-1 bg-gradient-to-br from-white/30 to-transparent rounded-full"></div>
-
-                <!-- 音波可视化图标 -->
-                <div class="flex items-end gap-0.5 relative z-10">
-                  <div class="w-1 bg-white rounded-full animate-bounce" style="height: 6px; animation-delay: 0s; animation-duration: 0.8s;"></div>
-                  <div class="w-1 bg-white rounded-full animate-bounce" style="height: 10px; animation-delay: 0.1s; animation-duration: 0.8s;"></div>
-                  <div class="w-1 bg-white rounded-full animate-bounce" style="height: 4px; animation-delay: 0.2s; animation-duration: 0.8s;"></div>
-                  <div class="w-1 bg-white rounded-full animate-bounce" style="height: 8px; animation-delay: 0.3s; animation-duration: 0.8s;"></div>
-                  <div class="w-1 bg-white rounded-full animate-bounce" style="height: 12px; animation-delay: 0.4s; animation-duration: 0.8s;"></div>
-                </div>
-
-                <!-- 旋转的音符图标 -->
-                <div class="absolute inset-0 flex items-center justify-center">
-                  <Icon icon="material-symbols:music-note-rounded" class="text-white/20 text-lg animate-spin" style="animation-duration: 3s;" />
-                </div>
-              </div>
-            </div>
 
             <!-- 暂停状态的装饰 -->
             <!-- <div
@@ -703,30 +785,30 @@ const backgroundStyle = computed(() => {
                 <!-- <div class="absolute -top-1 -right-1 w-2 h-2 bg-orange-400 rounded-full animate-pulse shadow-sm"></div>
               </div>
             </div> -->
-
-
           </div>
 
+
+
           <!-- 歌曲信息 -->
-          <div class="text-center mb-6">
+          <!-- <div class="text-center mb-6"> -->
             <!-- 歌曲标题 -->
-            <div class="flex items-center justify-center gap-2 mb-2">
+            <!-- <div class="flex items-center justify-center gap-2 mb-2">
               <Icon icon="material-symbols:music-note" class="text-blue-500 dark:text-blue-400 text-lg" />
               <h2 class="text-xl font-medium text-gray-900 dark:text-white">{{ currentTrack.title }}</h2>
-            </div>
+            </div> -->
 
             <!-- 艺术家 -->
-            <div class="flex items-center justify-center gap-2 mb-1">
+            <!-- <div class="flex items-center justify-center gap-2 mb-1">
               <Icon icon="material-symbols:person" class="text-gray-500 dark:text-gray-400 text-sm" />
               <p class="text-base text-gray-600 dark:text-gray-300">{{ currentTrack.artist }}</p>
-            </div>
+            </div> -->
 
             <!-- 专辑 -->
-            <div class="flex items-center justify-center gap-2">
+            <!-- <div class="flex items-center justify-center gap-2">
               <Icon icon="material-symbols:album" class="text-gray-400 dark:text-gray-500 text-sm" />
               <p class="text-sm text-gray-400 dark:text-gray-500">{{ currentTrack.album || '未知专辑' }}</p>
             </div>
-          </div>
+          </div> -->
 
           <!-- 播放控制 -->
           <div class="flex items-center justify-center gap-4 mb-6">
@@ -788,14 +870,7 @@ const backgroundStyle = computed(() => {
                   <VideoPlay />
                 </el-icon>
 
-                <!-- 装饰性音符 -->
-                <div
-                  v-if="isPlaying"
-                  class="absolute -top-1 -right-1 w-3 h-3 text-white/60 animate-bounce"
-                  style="animation-delay: 0.5s; animation-duration: 1.5s;"
-                >
-                  <Icon icon="material-symbols:music-note" class="text-xs" />
-                </div>
+
               </div>
             </button>
 
@@ -831,19 +906,6 @@ const backgroundStyle = computed(() => {
 
           <!-- 进度条 -->
           <div class="w-full max-w-xs mb-4 relative">
-            <!-- 音频可视化装饰 -->
-            <div class="flex items-center justify-center mb-3 gap-1">
-              <div
-                v-for="i in 12"
-                :key="i"
-                class="w-0.5 bg-gradient-to-t from-blue-400 to-blue-600 dark:from-blue-500 dark:to-blue-300 rounded-full transition-all duration-300"
-                :style="{
-                  height: isPlaying ? `${Math.random() * 8 + 4}px` : '2px',
-                  animationDelay: `${i * 0.1}s`,
-                  animation: isPlaying ? 'audioWave 1.5s ease-in-out infinite alternate' : 'none'
-                }"
-              ></div>
-            </div>
 
             <!-- 进度条容器 -->
             <div class="relative">
@@ -901,15 +963,48 @@ const backgroundStyle = computed(() => {
         <div class="w-2/3 bg-white dark:bg-gray-900 border-l border-gray-100 dark:border-gray-700 flex min-h-0 relative lyrics-area">
           <!-- 歌词内容区域 -->
           <div class="flex-1 p-8 flex flex-col min-h-0">
-            <!-- 歌词标题 -->
-            <div class="text-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
-              <div class="flex items-center justify-center gap-2 mb-1">
-                <Icon icon="material-symbols:lyrics" class="text-blue-500 dark:text-blue-400 text-lg" />
-                <h3 class="text-lg font-medium text-gray-900 dark:text-white">歌词</h3>
+            <!-- 歌曲信息区域 -->
+            <div class="mb-6 pb-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
+              <!-- 歌曲标题和MV按钮 -->
+              <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white text-center break-words">
+                  {{ currentTrack.title }}
+                </h1>
+                <!-- MV按钮 -->
+                <button
+                  v-if="currentTrack.mv && currentTrack.mv !== 0"
+                  @click="goToMV"
+                  class="mv-button group relative px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-xs sm:text-sm font-medium rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center gap-1.5 sm:gap-2 flex-shrink-0"
+                >
+                  <Icon icon="material-symbols:play-circle" class="play-icon text-base sm:text-lg" />
+                  <span>MV</span>
+                  <!-- 装饰性光效 -->
+                  <div class="absolute inset-0 rounded-lg bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                </button>
               </div>
-              <div class="flex items-center justify-center gap-2">
-                <Icon icon="material-symbols:music-note" class="text-gray-400 dark:text-gray-500 text-sm" />
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ currentTrack.title }} - {{ currentTrack.artist }}</p>
+
+              <!-- 歌曲详细信息 -->
+              <div class="flex flex-wrap items-center justify-center gap-x-4 sm:gap-x-6 gap-y-2 text-center text-sm">
+                <!-- 专辑信息 -->
+                <div class="flex items-center gap-1.5">
+                  <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">专辑:</span>
+                  <!-- <Icon icon="material-symbols:album" class="text-gray-400 dark:text-gray-500 text-sm flex-shrink-0" /> -->
+                  <span class="text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ currentTrack.album || '未知专辑' }}</span>
+                </div>
+
+                <!-- 艺术家信息 -->
+                <div class="flex items-center gap-1.5">
+                  <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">歌手:</span>
+                  <!-- <Icon icon="material-symbols:person" class="text-gray-400 dark:text-gray-500 text-sm flex-shrink-0" /> -->
+                  <span class="text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ currentTrack.artist }}</span>
+                </div>
+
+                <!-- 播放来源信息 -->
+                <div class="flex items-center gap-1.5">
+                  <span class="text-gray-500 dark:text-gray-400 flex-shrink-0">来源:</span>
+                  <!-- <Icon icon="material-symbols:cloud-queue" class="text-gray-400 dark:text-gray-500 text-sm flex-shrink-0" /> -->
+                  <span class="text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ getPlaySource() }}</span>
+                </div>
               </div>
             </div>
 
@@ -1236,25 +1331,80 @@ const backgroundStyle = computed(() => {
         </div>
       </main>
     </div>
-  </div>
-
-
+    </div>
+  </Transition>
 </template>
 
 <style scoped lang="scss">
-.lyrics-page-container {
-  animation: fadeIn 0.3s ease-out;
+// MV按钮特殊效果
+.mv-button {
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s;
+  }
+
+  &:hover::before {
+    left: 100%;
+  }
+
+  // 播放图标动画
+  &:hover .play-icon {
+    animation: pulse-play 0.6s ease-in-out;
+  }
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+@keyframes pulse-play {
+  0%, 100% {
+    transform: scale(1);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  50% {
+    transform: scale(1.1);
   }
+}
+
+// 抽屉式动画效果
+.drawer-enter-active {
+  transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              opacity 0.3s ease-out;
+}
+
+.drawer-leave-active {
+  transition: transform 0.35s cubic-bezier(0.55, 0.055, 0.675, 0.19),
+              opacity 0.25s ease-in;
+}
+
+.drawer-enter-from {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.drawer-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.drawer-enter-to,
+.drawer-leave-from {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+// 确保动画期间性能优化
+.lyrics-page-container {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 @keyframes spin-slow {
@@ -1322,17 +1472,7 @@ const backgroundStyle = computed(() => {
   }
 }
 
-// 播放指示器动画
-@keyframes record-pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 0.8;
-  }
-}
+
 
 // 歌词行样式优化
 .lyric-line {
@@ -2158,17 +2298,7 @@ button[title="下一首"]:hover {
   }
 }
 
-/* 音频波形动画 */
-@keyframes audioWave {
-  0%, 100% {
-    transform: scaleY(0.3);
-    opacity: 0.6;
-  }
-  50% {
-    transform: scaleY(1);
-    opacity: 1;
-  }
-}
+
 
 /* 按钮波纹效果 */
 @keyframes ripple {
@@ -2256,5 +2386,419 @@ button[title="下一首"]:hover {
 }
 
 /* 黑胶唱片旋转动画 */
+
+/* 音波可视化特效系统 */
+
+/* 背景光晕效果 */
+.soundwave-glow-bg {
+  background: radial-gradient(
+    circle at center,
+    rgba(59, 130, 246, 0.1) 0%,
+    rgba(147, 51, 234, 0.08) 25%,
+    rgba(6, 182, 212, 0.06) 50%,
+    rgba(236, 72, 153, 0.04) 75%,
+    transparent 100%
+  );
+  animation: glowPulse 4s ease-in-out infinite;
+  filter: blur(20px);
+}
+
+.dark .soundwave-glow-bg {
+  background: radial-gradient(
+    circle at center,
+    rgba(59, 130, 246, 0.15) 0%,
+    rgba(147, 51, 234, 0.12) 25%,
+    rgba(6, 182, 212, 0.1) 50%,
+    rgba(236, 72, 153, 0.08) 75%,
+    transparent 100%
+  );
+}
+
+/* 外层：低频慢波扩散 */
+.soundwave-outer-1 {
+  border-color: rgba(59, 130, 246, 0.3);
+  animation: soundwaveOuter 3s ease-out infinite;
+  animation-delay: 0s;
+  filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5));
+}
+
+.soundwave-outer-2 {
+  border-color: rgba(147, 51, 234, 0.25);
+  animation: soundwaveOuter 3.2s ease-out infinite;
+  animation-delay: 0.4s;
+  filter: drop-shadow(0 0 8px rgba(147, 51, 234, 0.4));
+}
+
+.soundwave-outer-3 {
+  border-color: rgba(6, 182, 212, 0.2);
+  animation: soundwaveOuter 3.4s ease-out infinite;
+  animation-delay: 0.8s;
+  filter: drop-shadow(0 0 6px rgba(6, 182, 212, 0.3));
+}
+
+.soundwave-outer-4 {
+  border-color: rgba(236, 72, 153, 0.15);
+  animation: soundwaveOuter 3.6s ease-out infinite;
+  animation-delay: 1.2s;
+  filter: drop-shadow(0 0 4px rgba(236, 72, 153, 0.2));
+}
+
+/* 中层：中频波动效果 */
+.soundwave-mid-1 {
+  border-color: rgba(59, 130, 246, 0.4);
+  animation: soundwaveMid 2.2s ease-in-out infinite;
+  animation-delay: 0.1s;
+  filter: drop-shadow(0 0 12px rgba(59, 130, 246, 0.6));
+}
+
+.soundwave-mid-2 {
+  border-color: rgba(147, 51, 234, 0.35);
+  animation: soundwaveMid 2.4s ease-in-out infinite;
+  animation-delay: 0.3s;
+  filter: drop-shadow(0 0 10px rgba(147, 51, 234, 0.5));
+}
+
+.soundwave-mid-3 {
+  border-color: rgba(6, 182, 212, 0.3);
+  animation: soundwaveMid 2.6s ease-in-out infinite;
+  animation-delay: 0.5s;
+  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.4));
+}
+
+.soundwave-mid-4 {
+  border-color: rgba(236, 72, 153, 0.25);
+  animation: soundwaveMid 2.8s ease-in-out infinite;
+  animation-delay: 0.7s;
+  filter: drop-shadow(0 0 6px rgba(236, 72, 153, 0.3));
+}
+
+/* 内层：高频快速波纹 */
+.soundwave-inner-1 {
+  border-color: rgba(59, 130, 246, 0.6);
+  animation: soundwaveInner 1.2s ease-in-out infinite;
+  animation-delay: 0s;
+  filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.8));
+}
+
+.soundwave-inner-2 {
+  border-color: rgba(147, 51, 234, 0.55);
+  animation: soundwaveInner 1.4s ease-in-out infinite;
+  animation-delay: 0.2s;
+  filter: drop-shadow(0 0 12px rgba(147, 51, 234, 0.7));
+}
+
+.soundwave-inner-3 {
+  border-color: rgba(6, 182, 212, 0.5);
+  animation: soundwaveInner 1.6s ease-in-out infinite;
+  animation-delay: 0.4s;
+  filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.6));
+}
+
+.soundwave-inner-4 {
+  border-color: rgba(236, 72, 153, 0.45);
+  animation: soundwaveInner 1.8s ease-in-out infinite;
+  animation-delay: 0.6s;
+  filter: drop-shadow(0 0 8px rgba(236, 72, 153, 0.5));
+}
+
+/* 频谱可视化条 */
+.spectrum-visualizer {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 2px;
+  height: 40px;
+  opacity: 0.7;
+}
+
+.spectrum-bar {
+  width: 3px;
+  background: linear-gradient(
+    to top,
+    rgba(59, 130, 246, 0.8) 0%,
+    rgba(147, 51, 234, 0.6) 50%,
+    rgba(6, 182, 212, 0.4) 100%
+  );
+  border-radius: 2px;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.spectrum-bar-1 { animation: spectrumBeat 0.8s ease-in-out infinite; height: 20%; }
+.spectrum-bar-2 { animation: spectrumBeat 0.9s ease-in-out infinite; height: 40%; animation-delay: 0.1s; }
+.spectrum-bar-3 { animation: spectrumBeat 1.1s ease-in-out infinite; height: 60%; animation-delay: 0.2s; }
+.spectrum-bar-4 { animation: spectrumBeat 1.3s ease-in-out infinite; height: 80%; animation-delay: 0.3s; }
+.spectrum-bar-5 { animation: spectrumBeat 1.2s ease-in-out infinite; height: 70%; animation-delay: 0.4s; }
+.spectrum-bar-6 { animation: spectrumBeat 1.0s ease-in-out infinite; height: 50%; animation-delay: 0.5s; }
+.spectrum-bar-7 { animation: spectrumBeat 0.85s ease-in-out infinite; height: 30%; animation-delay: 0.6s; }
+.spectrum-bar-8 { animation: spectrumBeat 0.95s ease-in-out infinite; height: 25%; animation-delay: 0.7s; }
+
+/* 脉冲节拍效果 */
+.pulse-beat-1 {
+  border-color: rgba(59, 130, 246, 0.8);
+  animation: pulseBeat 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation-delay: 0s;
+  filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
+}
+
+.pulse-beat-2 {
+  border-color: rgba(147, 51, 234, 0.6);
+  animation: pulseBeat 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation-delay: 0.2s;
+  filter: drop-shadow(0 0 15px rgba(147, 51, 234, 0.5));
+}
+
+.pulse-beat-3 {
+  border-color: rgba(6, 182, 212, 0.4);
+  animation: pulseBeat 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation-delay: 0.4s;
+  filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.4));
+}
+
+/* 动态光环 */
+.dynamic-ring-1 {
+  background: conic-gradient(
+    from 0deg,
+    rgba(59, 130, 246, 0.3) 0deg,
+    rgba(147, 51, 234, 0.2) 120deg,
+    rgba(6, 182, 212, 0.3) 240deg,
+    rgba(59, 130, 246, 0.3) 360deg
+  );
+  animation: dynamicRing 4s linear infinite;
+  filter: blur(8px);
+}
+
+.dynamic-ring-2 {
+  background: conic-gradient(
+    from 120deg,
+    rgba(147, 51, 234, 0.25) 0deg,
+    rgba(6, 182, 212, 0.15) 120deg,
+    rgba(236, 72, 153, 0.25) 240deg,
+    rgba(147, 51, 234, 0.25) 360deg
+  );
+  animation: dynamicRing 6s linear infinite reverse;
+  filter: blur(12px);
+}
+
+.dynamic-ring-3 {
+  background: conic-gradient(
+    from 240deg,
+    rgba(6, 182, 212, 0.2) 0deg,
+    rgba(236, 72, 153, 0.1) 120deg,
+    rgba(59, 130, 246, 0.2) 240deg,
+    rgba(6, 182, 212, 0.2) 360deg
+  );
+  animation: dynamicRing 8s linear infinite;
+  filter: blur(16px);
+}
+
+/* 音波动画关键帧 */
+
+/* 背景光晕脉冲 */
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* 外层音波扩散 */
+@keyframes soundwaveOuter {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+/* 中层音波波动 */
+@keyframes soundwaveMid {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* 内层高频波纹 */
+@keyframes soundwaveInner {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* 频谱可视化动画 */
+@keyframes spectrumBeat {
+  0%, 100% {
+    transform: scaleY(0.3);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* 脉冲节拍动画 */
+@keyframes pulseBeat {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 动态光环旋转 */
+@keyframes dynamicRing {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 自定义宽高类 */
+.w-52 {
+  width: 13rem; /* 208px */
+}
+
+.h-52 {
+  height: 13rem; /* 208px */
+}
+
+.w-56 {
+  width: 14rem; /* 224px */
+}
+
+.h-56 {
+  height: 14rem; /* 224px */
+}
+
+.w-60 {
+  width: 15rem; /* 240px */
+}
+
+.h-60 {
+  height: 15rem; /* 240px */
+}
+
+.w-68 {
+  width: 17rem; /* 272px */
+}
+
+.h-68 {
+  height: 17rem; /* 272px */
+}
+
+.w-72 {
+  width: 18rem; /* 288px */
+}
+
+.h-72 {
+  height: 18rem; /* 288px */
+}
+
+.w-76 {
+  width: 19rem; /* 304px */
+}
+
+.h-76 {
+  height: 19rem; /* 304px */
+}
+
+.w-84 {
+  width: 21rem; /* 336px */
+}
+
+.h-84 {
+  height: 21rem; /* 336px */
+}
+
+.w-88 {
+  width: 22rem; /* 352px */
+}
+
+.h-88 {
+  height: 22rem; /* 352px */
+}
+
+.w-92 {
+  width: 23rem; /* 368px */
+}
+
+.h-92 {
+  height: 23rem; /* 368px */
+}
+
+.w-104 {
+  width: 26rem; /* 416px */
+}
+
+.h-104 {
+  height: 26rem; /* 416px */
+}
+
+.w-108 {
+  width: 27rem; /* 432px */
+}
+
+.h-108 {
+  height: 27rem; /* 432px */
+}
+
+.w-112 {
+  width: 28rem; /* 448px */
+}
+
+.h-112 {
+  height: 28rem; /* 448px */
+}
+
+.w-120 {
+  width: 30rem; /* 480px */
+}
+
+.h-120 {
+  height: 30rem; /* 480px */
+}
+
+.w-128 {
+  width: 32rem; /* 512px */
+}
+
+.h-128 {
+  height: 32rem; /* 512px */
+}
 
 </style>

@@ -27,6 +27,8 @@ export interface trackModel {
     url: string; // 音频地址
     duration: number; // 时长
     lyrics?: LyricData; // 歌词
+    mv?: number | null; // MV ID（可选）
+    source?: string; // 播放来源（可选）
 }
 
 /* MenuState */

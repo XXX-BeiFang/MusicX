@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { API } from '@/api/interface'
 import { PropType } from 'vue'
-import { formatMillisecondsToTime } from '@/utils'
+import { formatMillisecondsToTime, convertToTrackModel } from '@/utils'
 import { urlV1 } from '@/api'
+import { settingStore } from '@/stores/modules/setting'
+
 const audio = AudioStore()
+const setting = settingStore()
 const router = useRouter()
 const { loadTrack, play } = useAudioPlayer()
 
-defineProps({
+const props = defineProps({
   data: {
     type: Array as PropType<API.Song[]>,
     default: () => [],
@@ -18,8 +21,18 @@ defineProps({
 const handleRowDblclick = async (row: API.Song) => {
   // 转换歌曲实体
   const track = convertToTrackModel(row)
-  // 添加到播放列表
-  audio.addTracks(track)
+
+  // 根据设置决定播放行为
+  if (setting.playlistDoubleClickBehavior === 'replace') {
+    // 替换播放列表模式：将当前歌曲列表替换为播放列表
+    const allTracks = props.data.map(song => convertToTrackModel(song))
+    const currentIndex = props.data.findIndex(song => song.id === row.id)
+    audio.replaceTracks(allTracks, currentIndex)
+  } else {
+    // 添加模式：仅添加当前歌曲到播放列表
+    audio.addTracks(track)
+  }
+
   // 播放
   await loadTrack()
   play()

@@ -42,7 +42,7 @@ const toggleVolume = () => {
     >
       <Icon
         :name="isMuted ? 'Mute' : 'Microphone'"
-        :size="18" 
+        :size="18"
         class="text-primary"
       />
     </button>

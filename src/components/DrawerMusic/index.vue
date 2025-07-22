@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Left from './left.vue'
 import Right from './right.vue'
+import SettingsDialog from './SettingsDialog.vue'
 import { useDateFormat, useNow } from '@vueuse/core'
 
 const formatted = useDateFormat(useNow(), 'HH:mm:ss')
@@ -8,6 +9,7 @@ const setting = settingStore()
 const showDrawer = defineModel<boolean>()
 const user = UserStore()
 const showLogin = ref(false)
+const showSettingsDialog = ref(false)
 
 const { currentTrack } = useAudioPlayer()
 </script>
@@ -49,6 +51,17 @@ const { currentTrack } = useAudioPlayer()
             <icon-ic:baseline-battery-charging-80 />
           </div>
 
+          <!-- 设置按钮 -->
+          <el-button
+            text
+            circle
+            @click="showSettingsDialog = true"
+            class="hover:bg-white/10 transition-colors"
+            title="设置"
+          >
+            <icon-material-symbols:settings class="text-lg" />
+          </el-button>
+
           <el-avatar
             v-if="user.userInfo && user.userInfo.userId"
             :src="user.userInfo.avatarUrl"
@@ -81,6 +94,7 @@ const { currentTrack } = useAudioPlayer()
       </div>
     </main>
     <LoginPopup v-if="showLogin" v-model="showLogin" />
+    <SettingsDialog v-model="showSettingsDialog" />
     <template #footer>
       <div class="flex justify-end gap-2">
         <el-switch

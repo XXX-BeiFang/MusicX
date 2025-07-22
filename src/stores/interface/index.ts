@@ -48,6 +48,20 @@ export interface SettingState {
     wallpaperType: 'preset' | 'custom' | 'none' | 'color' // 壁纸类型：预设、自定义、无、颜色
     wallpaperOpacity: number // 壁纸透明度
     wallpaperBlur: number // 壁纸模糊度
+    playlistDoubleClickBehavior: 'replace' | 'add' // 播放列表双击行为：替换当前播放列表 | 添加到当前播放列表
+    // 音质设置
+    audioQuality: 'standard' | 'higher' | 'exhigh' | 'lossless' | 'hires' // 音质选择
+    // 播放设置
+    autoPlay: boolean // 自动播放
+    crossfade: boolean // 淡入淡出
+    gaplessPlayback: boolean // 无缝播放
+    // 显示设置
+    showDesktopLyrics: boolean // 桌面歌词
+    enableNotifications: boolean // 通知提醒
+    // 音效设置
+    bassBoost: number // 低音增强 (-10 到 10)
+    trebleBoost: number // 高音增强 (-10 到 10)
+    virtualSurround: boolean // 虚拟环绕声
 }
 
 /* ChatState */

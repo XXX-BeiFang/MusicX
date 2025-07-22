@@ -5,7 +5,7 @@ import { formatTime } from '@/utils'
 import { settingStore } from '@/stores/modules/setting'
 import { Icon } from '@iconify/vue'
 import { ElScrollbar, ElIcon } from 'element-plus'
-import { Timer, EditPen, Brush, Plus, Minus, Check, RefreshRight, Mouse, VideoPlay, VideoPause, Back, Right, Refresh, Sort, Star, Share, Setting, Mute, Microphone } from '@element-plus/icons-vue'
+import { Timer, EditPen, Brush, Plus, Minus, Check, RefreshRight, Mouse, VideoPlay, VideoPause, Back, Right, Refresh, Sort, Star, Share, Setting, Mute, Microphone, Close } from '@element-plus/icons-vue'
 import { useAudioPlayer } from '@/hooks/useAudioPlayer'
 import { useDarkModeTransition } from '@/hooks/useDarkModeTransition'
 import { getCurrentThemeIcon, getThemeIconSize } from '@/utils/themeIcons'
@@ -34,6 +34,7 @@ const components = {
   Setting,
   Mute,
   Microphone,
+  Close,
   ElIcon,
   ElScrollbar
 }
@@ -42,7 +43,8 @@ const components = {
 const lyricsSettings = ref({
   fontSize: 18, // 默认字体大小
   color: '#3b82f6', // 默认颜色
-  speedOffset: 0 // 歌词速度偏移（秒）
+  speedOffset: 0, // 歌词速度偏移（秒）
+  fontFamily: 'default' // 默认字体
 })
 
 // 字体大小范围
@@ -58,13 +60,53 @@ const colorOptions = [
   { name: '浪漫粉', value: '#ec4899' },
   { name: '深邃黑', value: '#1f2937' },
   { name: '高贵金', value: '#d97706' },
-  { name: '宁静青', value: '#06b6d4' }
+  { name: '宁静青', value: '#06b6d4' },
+  { name: '典雅红', value: '#dc2626' }
 ]
+
+// 字体选项 - 按类别组织
+const fontCategories = [
+  {
+    title: '中文字体',
+    fonts: [
+      { name: '默认', value: 'default', family: 'inherit' },
+      { name: '思源黑体', value: 'source-han-sans', family: '"Source Han Sans SC", "Noto Sans CJK SC", sans-serif' },
+      { name: '思源宋体', value: 'source-han-serif', family: '"Source Han Serif SC", "Noto Serif CJK SC", serif' },
+      { name: '苹方', value: 'pingfang', family: '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif' },
+      { name: '微软雅黑', value: 'microsoft-yahei', family: '"Microsoft YaHei", "Segoe UI", sans-serif' },
+      { name: '华文楷体', value: 'stkaiti', family: '"STKaiti", "KaiTi", "楷体", serif' }
+    ]
+  },
+  {
+    title: '英文字体',
+    fonts: [
+      { name: 'Helvetica', value: 'helvetica', family: '"Helvetica Neue", Helvetica, Arial, sans-serif' },
+      { name: 'Times', value: 'times', family: '"Times New Roman", Times, serif' },
+      { name: 'Georgia', value: 'georgia', family: 'Georgia, "Times New Roman", serif' }
+    ]
+  }
+]
+
+// 保持向后兼容的扁平化字体选项
+const fontOptions = fontCategories.flatMap(category => category.fonts)
+
+// 字体样式选项
+const fontStyleOptions = [
+  { name: '加粗', value: 'bold', style: 'font-weight: bold;', icon: 'B' },
+  { name: '斜体', value: 'italic', style: 'font-style: italic;', icon: 'I' },
+  { name: '下划线', value: 'underline', style: 'text-decoration: underline;', icon: 'U' }
+]
+
+// 字体样式状态
+const selectedFontStyles = ref(new Set())
 
 // 控制面板显示状态
 const showControlPanel = ref(false)
+const showFontPanel = ref(false)
 const controlPanelTimer = ref<NodeJS.Timeout | null>(null)
 const showInitialHint = ref(true)
+// 右侧功能区显示状态（通过齿轮按钮控制）
+const showControlPanelByButton = ref(false)
 
 const {
   currentTrack,
@@ -84,7 +126,6 @@ const {
 
 const scrollContainer = ref<HTMLDivElement | null>(null)
 const isUserScrolling = ref(false)
-const showShortcuts = ref(false)
 const iconError = ref(false)
 
 
@@ -260,11 +301,37 @@ const setLyricsColor = (color: string) => {
   lyricsSettings.value.color = color
 }
 
+const setLyricsFont = (fontValue: string) => {
+  lyricsSettings.value.fontFamily = fontValue
+}
+
+// 计算当前字体样式
+const currentFontFamily = computed(() => {
+  const selectedFont = fontOptions.find(font => font.value === lyricsSettings.value.fontFamily)
+  return selectedFont ? selectedFont.family : 'inherit'
+})
+
+// 计算当前字体样式CSS
+const currentFontStyle = computed(() => {
+  let styles = []
+  if (selectedFontStyles.value.has('bold')) {
+    styles.push('font-weight: bold')
+  }
+  if (selectedFontStyles.value.has('italic')) {
+    styles.push('font-style: italic')
+  }
+  if (selectedFontStyles.value.has('underline')) {
+    styles.push('text-decoration: underline')
+  }
+  return styles.join('; ')
+})
+
 const resetLyricsSettings = () => {
   lyricsSettings.value = {
     fontSize: 18,
     color: '#3b82f6',
-    speedOffset: 0
+    speedOffset: 0,
+    fontFamily: 'default'
   }
 }
 
@@ -280,11 +347,34 @@ const handleControlPanelLeave = () => {
   showControlPanel.value = false
 }
 
+// 齿轮按钮控制右侧功能区显示/隐藏
+const toggleControlPanelByButton = () => {
+  showControlPanelByButton.value = !showControlPanelByButton.value
+  if (showControlPanelByButton.value && showInitialHint.value) {
+    showInitialHint.value = false
+  }
+}
+
+// 点击外部隐藏右侧功能区
+const handleClickOutside = (event: Event) => {
+  const target = event.target as HTMLElement
+  // 检查点击是否在右侧功能区域或齿轮按钮内
+  if (!target.closest('.control-trigger-zone') && !target.closest('.gear-button')) {
+    showControlPanelByButton.value = false
+  }
+}
+
 // 颜色选择面板显示/隐藏逻辑
 const showColorPicker = ref(false)
 
-const toggleColorPicker = (event: Event) => {
-  event.stopPropagation()
+const toggleColorPicker = (event?: Event) => {
+  if (event) {
+    event.stopPropagation()
+  }
+  // 如果字体面板已打开，先关闭字体面板
+  if (showFontPanel.value) {
+    showFontPanel.value = false
+  }
   showColorPicker.value = !showColorPicker.value
 }
 
@@ -293,18 +383,63 @@ const setLyricsColorAndClose = (color: string) => {
   showColorPicker.value = false
 }
 
+// 字体面板切换函数
+const toggleFontPanel = (event?: Event) => {
+  if (event) {
+    event.stopPropagation()
+  }
+  // 如果颜色面板已打开，先关闭颜色面板
+  if (showColorPicker.value) {
+    showColorPicker.value = false
+  }
+  showFontPanel.value = !showFontPanel.value
+}
+
+const setLyricsFontAndClose = (fontValue: string) => {
+  setLyricsFont(fontValue)
+  showFontPanel.value = false
+}
+
+// 切换字体样式
+const toggleFontStyle = (styleValue: string) => {
+  if (selectedFontStyles.value.has(styleValue)) {
+    selectedFontStyles.value.delete(styleValue)
+  } else {
+    selectedFontStyles.value.add(styleValue)
+  }
+  // 触发响应式更新
+  selectedFontStyles.value = new Set(selectedFontStyles.value)
+}
+
 // 点击外部关闭颜色选择面板
-const closeColorPicker = () => {
-  showColorPicker.value = false
+const closeColorPicker = (event: Event) => {
+  const target = event.target as HTMLElement
+  // 检查点击是否在颜色选择器内部
+  if (!target.closest('.color-control')) {
+    showColorPicker.value = false
+  }
+}
+
+// 点击外部关闭字体选择面板
+const closeFontPanel = (event: Event) => {
+  const target = event.target as HTMLElement
+  // 检查点击是否在字体选择器内部
+  if (!target.closest('.font-control')) {
+    showFontPanel.value = false
+  }
 }
 
 // 监听全局点击事件
 onMounted(() => {
   document.addEventListener('click', closeColorPicker)
+  document.addEventListener('click', closeFontPanel)
+  document.addEventListener('click', handleClickOutside)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', closeColorPicker)
+  document.removeEventListener('click', closeFontPanel)
+  document.removeEventListener('click', handleClickOutside)
 })
 
 // 计算调整后的当前歌词索引（考虑速度偏移）
@@ -343,21 +478,21 @@ const backgroundStyle = computed(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 z-50 lyrics-page-container bg-white">
+  <div class="fixed inset-0 z-50 lyrics-page-container bg-white dark:bg-gray-900">
     <!-- 主要内容区域 -->
     <div class="h-full flex flex-col">
       <!-- 顶部导航栏 -->
-      <header class="flex items-center justify-between px-8 py-6 bg-white border-b border-gray-100 flex-shrink-0">
+      <header class="flex items-center justify-between px-8 py-6 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
         <div class="flex items-center gap-4">
           <button
             @click="closeLyricsPage"
-            class="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center text-gray-600 hover:text-gray-900"
+            class="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <Icon icon="material-symbols:arrow-back-ios" class="text-lg" />
           </button>
           <div>
-            <h1 class="text-lg font-medium text-gray-900">{{ currentTrack.title }}</h1>
-            <p class="text-sm text-gray-500">{{ currentTrack.artist }}</p>
+            <h1 class="text-lg font-medium text-gray-900 dark:text-white">{{ currentTrack.title }}</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{{ currentTrack.artist }}</p>
           </div>
         </div>
 
@@ -365,11 +500,11 @@ const backgroundStyle = computed(() => {
           <!-- 主题切换按钮 -->
           <button
             @click="toggleTheme($event)"
-            class="group relative w-11 h-11 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-blue-50 hover:to-blue-100 border border-gray-200/50 hover:border-blue-200 transition-all duration-300 flex items-center justify-center text-gray-600 hover:text-blue-600 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95"
-            :class="{ 'from-blue-100 to-blue-200 border-blue-300 text-blue-700': isDarkMode }"
+            class="group relative w-11 h-11 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900 dark:hover:to-blue-800 border border-gray-200/50 dark:border-gray-600/50 hover:border-blue-200 dark:hover:border-blue-400 transition-all duration-300 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95"
+            :class="{ 'from-blue-100 to-blue-200 border-blue-300 text-blue-700 dark:from-blue-800 dark:to-blue-700 dark:border-blue-500 dark:text-blue-300': isDarkMode }"
           >
             <!-- 背景光效 -->
-            <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 dark:from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <Icon
               :icon="getCurrentThemeIcon(isDarkMode)"
               :class="[getThemeIconSize(), 'relative z-10 transition-transform duration-200 group-hover:scale-110']"
@@ -377,9 +512,9 @@ const backgroundStyle = computed(() => {
           </button>
 
           <!-- 收藏按钮 -->
-          <button class="group relative w-11 h-11 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-red-50 hover:to-red-100 border border-gray-200/50 hover:border-red-200 transition-all duration-300 flex items-center justify-center text-gray-600 hover:text-red-500 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95">
+          <button class="group relative w-11 h-11 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 hover:from-red-50 hover:to-red-100 dark:hover:from-red-900 dark:hover:to-red-800 border border-gray-200/50 dark:border-gray-600/50 hover:border-red-200 dark:hover:border-red-400 transition-all duration-300 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95">
             <!-- 背景光效 -->
-            <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 dark:from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <el-icon class="text-lg relative z-10 transition-transform duration-200 group-hover:scale-110">
               <Star />
             </el-icon>
@@ -388,9 +523,9 @@ const backgroundStyle = computed(() => {
           </button>
 
           <!-- 分享按钮 -->
-          <button class="group relative w-11 h-11 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-blue-50 hover:to-blue-100 border border-gray-200/50 hover:border-blue-200 transition-all duration-300 flex items-center justify-center text-gray-600 hover:text-blue-500 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95">
+          <button class="group relative w-11 h-11 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900 dark:hover:to-blue-800 border border-gray-200/50 dark:border-gray-600/50 hover:border-blue-200 dark:hover:border-blue-400 transition-all duration-300 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95">
             <!-- 背景光效 -->
-            <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 dark:from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             <el-icon class="text-lg relative z-10 transition-transform duration-200 group-hover:scale-110">
               <Share />
             </el-icon>
@@ -398,85 +533,33 @@ const backgroundStyle = computed(() => {
             <div class="absolute inset-0 rounded-xl border-2 border-blue-400/30 opacity-0 group-hover:opacity-100 animate-pulse transition-opacity duration-300"></div>
           </button>
 
-          <!-- 快捷键按钮 -->
+          <!-- 右侧功能区控制按钮（齿轮） -->
           <button
-            class="group relative w-11 h-11 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-purple-50 hover:to-purple-100 border border-gray-200/50 hover:border-purple-200 transition-all duration-300 flex items-center justify-center text-gray-600 hover:text-purple-600 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95"
-            @click="showShortcuts = !showShortcuts"
+            class="gear-button group relative w-11 h-11 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 hover:from-orange-50 hover:to-orange-100 dark:hover:from-orange-900 dark:hover:to-orange-800 border border-gray-200/50 dark:border-gray-600/50 hover:border-orange-200 dark:hover:border-orange-400 transition-all duration-300 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95"
+            @click="toggleControlPanelByButton"
           >
             <!-- 背景光效 -->
-            <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            <el-icon class="text-lg relative z-10 transition-transform duration-200 group-hover:scale-110">
+            <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 dark:from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <el-icon class="text-lg relative z-10 transition-transform duration-200 group-hover:scale-110" :class="{ 'animate-spin': showControlPanelByButton }">
               <Setting />
             </el-icon>
             <!-- 活跃状态指示器 -->
             <div
-              class="absolute -top-1 -right-1 w-3 h-3 bg-purple-500 rounded-full transition-all duration-300"
-              :class="showShortcuts ? 'opacity-100 scale-100' : 'opacity-0 scale-0'"
+              class="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full transition-all duration-300"
+              :class="showControlPanelByButton ? 'opacity-100 scale-100' : 'opacity-0 scale-0'"
             >
-              <div class="absolute inset-0 bg-purple-400 rounded-full animate-ping"></div>
-            </div>
-
-            <!-- 快捷键提示面板 -->
-            <div
-              v-if="showShortcuts"
-              class="absolute top-14 right-0 bg-white/95 backdrop-blur-md rounded-xl p-5 text-sm text-gray-700 whitespace-nowrap z-20 border border-gray-200/50 shadow-xl min-w-[200px]"
-              style="animation: slideDown 0.3s ease-out;"
-            >
-              <!-- 面板标题 -->
-              <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-100">
-                <Icon icon="material-symbols:keyboard" class="text-purple-500" />
-                <span class="font-medium text-gray-800">快捷键</span>
-              </div>
-
-              <div class="space-y-3">
-                <div class="flex justify-between items-center gap-6">
-                  <div class="flex items-center gap-2">
-                    <Icon icon="material-symbols:play-arrow" class="text-blue-500 text-sm" />
-                    <span>播放/暂停</span>
-                  </div>
-                  <kbd class="px-2 py-1 bg-gradient-to-br from-gray-100 to-gray-200 rounded-md text-xs font-mono shadow-sm border border-gray-300">Space</kbd>
-                </div>
-                <div class="flex justify-between items-center gap-6">
-                  <div class="flex items-center gap-2">
-                    <Icon icon="material-symbols:skip-previous" class="text-green-500 text-sm" />
-                    <span>上一首</span>
-                  </div>
-                  <kbd class="px-2 py-1 bg-gradient-to-br from-gray-100 to-gray-200 rounded-md text-xs font-mono shadow-sm border border-gray-300">←</kbd>
-                </div>
-                <div class="flex justify-between items-center gap-6">
-                  <div class="flex items-center gap-2">
-                    <Icon icon="material-symbols:skip-next" class="text-green-500 text-sm" />
-                    <span>下一首</span>
-                  </div>
-                  <kbd class="px-2 py-1 bg-gradient-to-br from-gray-100 to-gray-200 rounded-md text-xs font-mono shadow-sm border border-gray-300">→</kbd>
-                </div>
-                <div class="flex justify-between items-center gap-6">
-                  <div class="flex items-center gap-2">
-                    <Icon icon="material-symbols:volume-up" class="text-orange-500 text-sm" />
-                    <span>音量调节</span>
-                  </div>
-                  <kbd class="px-2 py-1 bg-gradient-to-br from-gray-100 to-gray-200 rounded-md text-xs font-mono shadow-sm border border-gray-300">↑↓</kbd>
-                </div>
-                <div class="flex justify-between items-center gap-6">
-                  <div class="flex items-center gap-2">
-                    <Icon icon="material-symbols:close" class="text-red-500 text-sm" />
-                    <span>关闭</span>
-                  </div>
-                  <kbd class="px-2 py-1 bg-gradient-to-br from-gray-100 to-gray-200 rounded-md text-xs font-mono shadow-sm border border-gray-300">Esc</kbd>
-                </div>
-              </div>
-
-              <!-- 装饰性箭头 -->
-              <div class="absolute -top-2 right-4 w-4 h-4 bg-white/95 border-l border-t border-gray-200/50 transform rotate-45 backdrop-blur-md"></div>
+              <div class="absolute inset-0 bg-orange-400 rounded-full animate-ping"></div>
             </div>
           </button>
+
+
         </div>
       </header>
 
       <!-- 主内容区域 -->
       <main class="flex-1 flex min-h-0">
         <!-- 左侧：专辑封面区域 -->
-        <div class="w-1/3 flex flex-col items-center justify-center p-8 bg-white">
+        <div class="w-1/3 flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-900">
           <!-- 专辑封面 - 黑胶唱片效果 -->
           <div class="relative mb-6">
             <div
@@ -604,7 +687,7 @@ const backgroundStyle = computed(() => {
             </div>
 
             <!-- 暂停状态的装饰 -->
-            <div
+            <!-- <div
               class="absolute -top-2 -left-2"
               :style="{
                 transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -613,12 +696,13 @@ const backgroundStyle = computed(() => {
               }"
             >
               <div class="w-8 h-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center shadow-lg border border-gray-300/50 backdrop-blur-sm">
+              -->
                 <!-- 暂停图标 -->
-                <Icon icon="material-symbols:pause-rounded" class="text-gray-500 text-sm" />
+                <!-- <Icon icon="material-symbols:pause-rounded" class="text-gray-500 text-sm" /> -->
                 <!-- 装饰性光点 -->
-                <div class="absolute -top-1 -right-1 w-2 h-2 bg-orange-400 rounded-full animate-pulse shadow-sm"></div>
+                <!-- <div class="absolute -top-1 -right-1 w-2 h-2 bg-orange-400 rounded-full animate-pulse shadow-sm"></div>
               </div>
-            </div>
+            </div> -->
 
 
           </div>
@@ -627,20 +711,20 @@ const backgroundStyle = computed(() => {
           <div class="text-center mb-6">
             <!-- 歌曲标题 -->
             <div class="flex items-center justify-center gap-2 mb-2">
-              <Icon icon="material-symbols:music-note" class="text-blue-500 text-lg" />
-              <h2 class="text-xl font-medium text-gray-900">{{ currentTrack.title }}</h2>
+              <Icon icon="material-symbols:music-note" class="text-blue-500 dark:text-blue-400 text-lg" />
+              <h2 class="text-xl font-medium text-gray-900 dark:text-white">{{ currentTrack.title }}</h2>
             </div>
 
             <!-- 艺术家 -->
             <div class="flex items-center justify-center gap-2 mb-1">
-              <Icon icon="material-symbols:person" class="text-gray-500 text-sm" />
-              <p class="text-base text-gray-600">{{ currentTrack.artist }}</p>
+              <Icon icon="material-symbols:person" class="text-gray-500 dark:text-gray-400 text-sm" />
+              <p class="text-base text-gray-600 dark:text-gray-300">{{ currentTrack.artist }}</p>
             </div>
 
             <!-- 专辑 -->
             <div class="flex items-center justify-center gap-2">
-              <Icon icon="material-symbols:album" class="text-gray-400 text-sm" />
-              <p class="text-sm text-gray-400">{{ currentTrack.album || '未知专辑' }}</p>
+              <Icon icon="material-symbols:album" class="text-gray-400 dark:text-gray-500 text-sm" />
+              <p class="text-sm text-gray-400 dark:text-gray-500">{{ currentTrack.album || '未知专辑' }}</p>
             </div>
           </div>
 
@@ -653,11 +737,11 @@ const backgroundStyle = computed(() => {
                 'group relative w-11 h-11 rounded-xl border transition-all duration-300 flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 ripple-effect',
                 playMode === 'shuffle'
                   ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400/30 text-white active-mode'
-                  : 'bg-gradient-to-br from-gray-50 to-gray-100 hover:from-blue-50 hover:to-blue-100 border-gray-200/50 hover:border-blue-200 text-gray-600 hover:text-blue-600'
+                  : 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 hover:from-blue-50 hover:to-blue-100 dark:hover:from-blue-900 dark:hover:to-blue-800 border-gray-200/50 dark:border-gray-600/50 hover:border-blue-200 dark:hover:border-blue-400 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
               ]"
               title="随机播放"
             >
-              <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 dark:from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <el-icon :class="['text-lg relative z-10 transition-transform duration-200', playMode === 'shuffle' ? 'animate-pulse' : '']">
                 <Refresh />
               </el-icon>
@@ -666,10 +750,10 @@ const backgroundStyle = computed(() => {
             <!-- 上一首按钮 -->
             <button
               @click="prevTrack"
-              class="group relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-200/50 hover:border-gray-300 transition-all duration-300 flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 ripple-effect"
+              class="group relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-600 dark:hover:to-gray-500 border border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-300 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 ripple-effect"
               title="上一首"
             >
-              <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 dark:from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <el-icon class="text-xl relative z-10 transition-transform duration-200 group-hover:-translate-x-0.5">
                 <Back />
               </el-icon>
@@ -718,10 +802,10 @@ const backgroundStyle = computed(() => {
             <!-- 下一首按钮 -->
             <button
               @click="nextTrack"
-              class="group relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 border border-gray-200/50 hover:border-gray-300 transition-all duration-300 flex items-center justify-center text-gray-700 hover:text-gray-900 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 ripple-effect"
+              class="group relative w-12 h-12 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-600 dark:hover:to-gray-500 border border-gray-200/50 dark:border-gray-600/50 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-300 flex items-center justify-center text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 ripple-effect"
               title="下一首"
             >
-              <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 dark:from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <el-icon class="text-xl relative z-10 transition-transform duration-200 group-hover:translate-x-0.5">
                 <Right />
               </el-icon>
@@ -734,11 +818,11 @@ const backgroundStyle = computed(() => {
                 'group relative w-11 h-11 rounded-xl border transition-all duration-300 flex items-center justify-center shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 ripple-effect',
                 playMode === 'loop'
                   ? 'bg-gradient-to-br from-green-500 to-green-600 border-green-400/30 text-white active-mode'
-                  : 'bg-gradient-to-br from-gray-50 to-gray-100 hover:from-green-50 hover:to-green-100 border-gray-200/50 hover:border-green-200 text-gray-600 hover:text-green-600'
+                  : 'bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 hover:from-green-50 hover:to-green-100 dark:hover:from-green-900 dark:hover:to-green-800 border-gray-200/50 dark:border-gray-600/50 hover:border-green-200 dark:hover:border-green-400 text-gray-600 dark:text-gray-300 hover:text-green-600 dark:hover:text-green-400'
               ]"
               title="循环播放"
             >
-              <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div class="absolute inset-0 rounded-xl bg-gradient-to-br from-white/60 dark:from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               <el-icon :class="['text-lg relative z-10 transition-transform duration-200', playMode === 'loop' ? 'animate-spin' : '']" style="animation-duration: 2s;">
                 <RefreshRight />
               </el-icon>
@@ -752,7 +836,7 @@ const backgroundStyle = computed(() => {
               <div
                 v-for="i in 12"
                 :key="i"
-                class="w-0.5 bg-gradient-to-t from-blue-400 to-blue-600 rounded-full transition-all duration-300"
+                class="w-0.5 bg-gradient-to-t from-blue-400 to-blue-600 dark:from-blue-500 dark:to-blue-300 rounded-full transition-all duration-300"
                 :style="{
                   height: isPlaying ? `${Math.random() * 8 + 4}px` : '2px',
                   animationDelay: `${i * 0.1}s`,
@@ -764,7 +848,7 @@ const backgroundStyle = computed(() => {
             <!-- 进度条容器 -->
             <div class="relative">
               <!-- 进度条背景装饰 -->
-              <div class="absolute -inset-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg opacity-50 blur-sm"></div>
+              <div class="absolute -inset-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg opacity-50 blur-sm"></div>
 
               <el-slider
                 v-model="currentTime"
@@ -777,12 +861,12 @@ const backgroundStyle = computed(() => {
               <!-- 进度指示器 -->
               <div class="flex items-center justify-between mb-1">
                 <div class="flex items-center gap-1">
-                  <Icon icon="material-symbols:play-arrow" class="text-xs text-blue-500" />
-                  <span class="text-xs text-gray-500">{{ formatTime(currentTime) }}</span>
+                  <Icon icon="material-symbols:play-arrow" class="text-xs text-blue-500 dark:text-blue-400" />
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatTime(currentTime) }}</span>
                 </div>
                 <div class="flex items-center gap-1">
-                  <span class="text-xs text-gray-500">{{ formatTime(duration) }}</span>
-                  <Icon icon="material-symbols:music-note" class="text-xs text-gray-400" />
+                  <span class="text-xs text-gray-500 dark:text-gray-400">{{ formatTime(duration) }}</span>
+                  <Icon icon="material-symbols:music-note" class="text-xs text-gray-400 dark:text-gray-500" />
                 </div>
               </div>
             </div>
@@ -792,7 +876,7 @@ const backgroundStyle = computed(() => {
           <div class="flex items-center gap-2">
             <button
               @click="toggleVolume"
-              class="w-8 h-8 rounded-full bg-gray-50 hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center text-gray-600 hover:text-gray-900"
+              class="w-8 h-8 rounded-full bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
             >
               <el-icon class="text-sm">
                 <Mute v-if="isMuted" />
@@ -807,25 +891,25 @@ const backgroundStyle = computed(() => {
               :max="100"
             />
             <div class="flex items-center gap-1">
-              <Icon icon="material-symbols:percent" class="text-xs text-gray-400" />
-              <span class="text-xs text-gray-500 w-6 text-center">{{ volume }}</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400 w-6 text-center">{{ volume }}</span>
+              <Icon icon="material-symbols:percent" class="text-xs text-gray-400 dark:text-gray-500" />
             </div>
           </div>
         </div>
 
         <!-- 右侧：歌词显示 -->
-        <div class="w-2/3 bg-white border-l border-gray-100 flex min-h-0 relative lyrics-area">
+        <div class="w-2/3 bg-white dark:bg-gray-900 border-l border-gray-100 dark:border-gray-700 flex min-h-0 relative lyrics-area">
           <!-- 歌词内容区域 -->
           <div class="flex-1 p-8 flex flex-col min-h-0">
             <!-- 歌词标题 -->
-            <div class="text-center mb-6 pb-4 border-b border-gray-100 flex-shrink-0">
+            <div class="text-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700 flex-shrink-0">
               <div class="flex items-center justify-center gap-2 mb-1">
-                <Icon icon="material-symbols:lyrics" class="text-blue-500 text-lg" />
-                <h3 class="text-lg font-medium text-gray-900">歌词</h3>
+                <Icon icon="material-symbols:lyrics" class="text-blue-500 dark:text-blue-400 text-lg" />
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white">歌词</h3>
               </div>
               <div class="flex items-center justify-center gap-2">
-                <Icon icon="material-symbols:music-note" class="text-gray-400 text-sm" />
-                <p class="text-sm text-gray-500">{{ currentTrack.title }} - {{ currentTrack.artist }}</p>
+                <Icon icon="material-symbols:music-note" class="text-gray-400 dark:text-gray-500 text-sm" />
+                <p class="text-sm text-gray-500 dark:text-gray-400">{{ currentTrack.title }} - {{ currentTrack.artist }}</p>
               </div>
             </div>
 
@@ -845,20 +929,23 @@ const backgroundStyle = computed(() => {
                 :key="item.time"
               >
                 <div
-                  class="group text-center cursor-pointer py-4 px-6 mx-4 mb-3 rounded-xl hover:bg-gray-50 relative lyric-line"
+                  class="group text-center cursor-pointer py-4 px-6 mx-4 mb-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 relative lyric-line"
                   :class="
                     adjustedCurrentLyricIndex == index
-                      ? 'activeLyric bg-blue-50/80 shadow-sm border border-blue-100'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'activeLyric bg-blue-50/80 dark:bg-blue-900/30 shadow-sm border border-blue-100 dark:border-blue-800'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                   "
                   :style="{
                     transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
                     transform: adjustedCurrentLyricIndex == index ? 'scale(1.05)' : 'scale(1)',
                     fontSize: adjustedCurrentLyricIndex == index ? `${lyricsSettings.fontSize + 4}px` : `${lyricsSettings.fontSize}px`,
-                    fontWeight: adjustedCurrentLyricIndex == index ? '600' : '400',
+                    fontWeight: selectedFontStyles.has('bold') ? 'bold' : (adjustedCurrentLyricIndex == index ? '600' : '400'),
+                    fontStyle: selectedFontStyles.has('italic') ? 'italic' : 'normal',
+                    textDecoration: selectedFontStyles.has('underline') ? 'underline' : 'none',
                     lineHeight: adjustedCurrentLyricIndex == index ? '1.6' : '1.5',
                     opacity: adjustedCurrentLyricIndex == index ? '1' : '0.7',
-                    color: adjustedCurrentLyricIndex == index ? lyricsSettings.color : ''
+                    color: adjustedCurrentLyricIndex == index ? lyricsSettings.color : '',
+                    fontFamily: currentFontFamily
                   }"
                   @click="seek(item.time / 1000)"
                 >
@@ -890,7 +977,7 @@ const backgroundStyle = computed(() => {
                   </p>
 
                   <!-- 悬停时的时间提示 -->
-                  <div class="absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity duration-200 text-xs text-gray-400 flex items-center gap-1">
+                  <div class="absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-60 transition-opacity duration-200 text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
                     <Icon icon="material-symbols:schedule" class="text-xs" />
                     {{ formatTime(item.time / 1000) }}
                   </div>
@@ -900,18 +987,18 @@ const backgroundStyle = computed(() => {
               <!-- 无歌词时的提示 -->
               <div
                 v-if="!currentTrack.lyrics?.lines?.length"
-                class="flex flex-col items-center justify-center h-full text-gray-400 py-20"
+                class="flex flex-col items-center justify-center h-full text-gray-400 dark:text-gray-500 py-20"
               >
-                <div class="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center mb-4 shadow-sm">
-                  <Icon icon="material-symbols:lyrics" class="text-2xl text-gray-400" />
+                <div class="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                  <Icon icon="material-symbols:lyrics" class="text-2xl text-gray-400 dark:text-gray-500" />
                 </div>
                 <div class="flex items-center gap-2 mb-2">
-                  <Icon icon="material-symbols:info" class="text-blue-500 text-sm" />
-                  <h3 class="text-lg font-medium text-gray-600">暂无歌词</h3>
+                  <Icon icon="material-symbols:info" class="text-blue-500 dark:text-blue-400 text-sm" />
+                  <h3 class="text-lg font-medium text-gray-600 dark:text-gray-400">暂无歌词</h3>
                 </div>
                 <div class="flex items-center gap-2">
-                  <Icon icon="material-symbols:headphones" class="text-green-500 text-sm" />
-                  <p class="text-sm text-gray-400">请欣赏这美妙的音乐</p>
+                  <Icon icon="material-symbols:headphones" class="text-green-500 dark:text-green-400 text-sm" />
+                  <p class="text-sm text-gray-400 dark:text-gray-500">请欣赏这美妙的音乐</p>
                 </div>
               </div>
               </el-scrollbar>
@@ -928,7 +1015,7 @@ const backgroundStyle = computed(() => {
             >
               <!-- 默认状态：显示触发提示 -->
               <div
-                v-show="!showControlPanel"
+                v-show="!showControlPanel && !showControlPanelByButton"
                 class="trigger-hint-display flex flex-col items-center justify-center w-full h-full"
               >
                 <!-- 触发区域提示条 -->
@@ -947,21 +1034,21 @@ const backgroundStyle = computed(() => {
                 >
                   <div class="flex items-center gap-2">
                     <el-icon class="text-sm"><Mouse /></el-icon>
-                    <span>悬停此区域显示控制面板</span>
+                    <span>悬停此区域或点击齿轮显示控制面板</span>
                   </div>
                   <!-- 箭头指向触发区域 -->
                   <div class="absolute left-full top-1/2 transform -translate-y-1/2 w-0 h-0 border-l-4 border-l-blue-500/90 border-t-2 border-t-transparent border-b-2 border-b-transparent"></div>
                 </div>
               </div>
 
-              <!-- 悬停状态：显示控制面板 -->
+              <!-- 悬停状态或按钮激活状态：显示控制面板 -->
               <div
-                v-show="showControlPanel"
+                v-show="showControlPanel || showControlPanelByButton"
                 class="lyrics-control-panel w-full flex flex-col items-center justify-center py-6 transition-all duration-300 ease-out relative min-h-full"
               >
             <!-- 背景装饰 -->
-            <div class="absolute inset-0 bg-gradient-to-b from-blue-50/30 via-purple-50/20 to-pink-50/30 rounded-l-3xl"></div>
-            <div class="absolute inset-0 backdrop-blur-xl bg-white/40 rounded-l-3xl border-l border-t border-b border-white/50 shadow-2xl"></div>
+            <div class="absolute inset-0 bg-gradient-to-b from-blue-50/30 via-purple-50/20 to-pink-50/30 dark:from-blue-900/20 dark:via-purple-900/15 dark:to-pink-900/20 rounded-l-3xl"></div>
+            <div class="absolute inset-0 backdrop-blur-xl bg-white/40 dark:bg-gray-800/40 rounded-l-3xl border-l border-t border-b border-white/50 dark:border-gray-600/50 shadow-2xl"></div>
 
             <!-- 控制按钮组 -->
             <div class="flex flex-col items-center gap-6 relative z-10">
@@ -969,24 +1056,24 @@ const backgroundStyle = computed(() => {
               <!-- 速度控制组 -->
               <div class="control-group">
                 <div class="group-header">
-                  <el-icon class="text-blue-500 text-lg"><Timer /></el-icon>
+                  <el-icon class="text-blue-500 dark:text-blue-400 text-lg"><Timer /></el-icon>
                   <span class="group-title">速度</span>
                 </div>
                 <div class="control-buttons">
-                  <button
-                    @click="adjustSpeed(-0.5)"
-                    class="control-btn control-btn-decrease"
-                    title="减慢歌词速度"
-                  >
-                    <el-icon><Minus /></el-icon>
-                  </button>
-                  <div class="control-value">{{ lyricsSettings.speedOffset >= 0 ? '+' : '' }}{{ lyricsSettings.speedOffset }}s</div>
                   <button
                     @click="adjustSpeed(0.5)"
                     class="control-btn control-btn-increase"
                     title="加快歌词速度"
                   >
                     <el-icon><Plus /></el-icon>
+                  </button>
+                  <div class="control-value">{{ lyricsSettings.speedOffset >= 0 ? '+' : '' }}{{ lyricsSettings.speedOffset }}s</div>
+                  <button
+                    @click="adjustSpeed(-0.5)"
+                    class="control-btn control-btn-decrease"
+                    title="减慢歌词速度"
+                  >
+                    <el-icon><Minus /></el-icon>
                   </button>
                 </div>
               </div>
@@ -997,29 +1084,87 @@ const backgroundStyle = computed(() => {
               <!-- 字号控制组 -->
               <div class="control-group">
                 <div class="group-header">
-                  <el-icon class="text-purple-500 text-lg"><EditPen /></el-icon>
+                  <el-icon class="text-purple-500 dark:text-purple-400 text-lg"><EditPen /></el-icon>
                   <span class="group-title">字号</span>
                 </div>
-                <div class="control-buttons">
-                  <button
-                    @click="adjustFontSize(-2)"
-                    :disabled="lyricsSettings.fontSize <= FONT_SIZE_MIN"
-                    class="control-btn control-btn-decrease"
-                    :class="{ 'control-btn-disabled': lyricsSettings.fontSize <= FONT_SIZE_MIN }"
-                    title="减小字号"
-                  >
-                    <el-icon><Minus /></el-icon>
-                  </button>
-                  <div class="control-value">{{ lyricsSettings.fontSize }}</div>
+                <div class="control-buttons vertical">
                   <button
                     @click="adjustFontSize(2)"
                     :disabled="lyricsSettings.fontSize >= FONT_SIZE_MAX"
                     class="control-btn control-btn-increase"
                     :class="{ 'control-btn-disabled': lyricsSettings.fontSize >= FONT_SIZE_MAX }"
-                    title="增大字号"
+                    title="字体放大"
                   >
                     <el-icon><Plus /></el-icon>
                   </button>
+                  <div class="control-value">{{ lyricsSettings.fontSize }}</div>
+                  <button
+                    @click="adjustFontSize(-2)"
+                    :disabled="lyricsSettings.fontSize <= FONT_SIZE_MIN"
+                    class="control-btn control-btn-decrease"
+                    :class="{ 'control-btn-disabled': lyricsSettings.fontSize <= FONT_SIZE_MIN }"
+                    title="字体缩小"
+                  >
+                    <el-icon><Minus /></el-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 分隔线 -->
+              <div class="control-divider"></div>
+
+              <!-- 字体控制组 -->
+              <div class="control-group">
+                <div class="group-header">
+                  <el-icon class="text-indigo-500 dark:text-indigo-400 text-lg"><Setting /></el-icon>
+                  <span class="group-title">字体</span>
+                </div>
+                <div class="font-control">
+                  <button
+                    class="font-btn"
+                    @click.stop="toggleFontPanel"
+                    :title="`当前字体: ${fontOptions.find(f => f.value === lyricsSettings.fontFamily)?.name || '默认'}`"
+                  >
+                    <span class="font-preview" :style="{ fontFamily: currentFontFamily }">字</span>
+                  </button>
+
+                  <!-- 字体选择面板 -->
+                  <div
+                    v-if="showFontPanel"
+                    class="color-picker-panel font-picker-panel"
+                    @click.stop
+                  >
+                    <!-- 字体选择区域 -->
+                    <div class="color-grid">
+                      <button
+                        v-for="font in fontOptions"
+                        :key="font.value"
+                        @click="setLyricsFontAndClose(font.value)"
+                        class="color-option"
+                        :class="{ 'color-option-active': lyricsSettings.fontFamily === font.value }"
+                        :title="font.name"
+                      >
+                        <div class="font-preview" :style="{ fontFamily: font.family }">字</div>
+                      </button>
+                    </div>
+
+                    <!-- 分隔线 -->
+                    <div class="font-style-divider"></div>
+
+                    <!-- 字体样式选择区域 -->
+                    <div class="font-style-grid">
+                      <button
+                        v-for="style in fontStyleOptions"
+                        :key="style.value"
+                        @click="toggleFontStyle(style.value)"
+                        class="font-style-option"
+                        :class="{ 'font-style-option-active': selectedFontStyles.has(style.value) }"
+                        :title="style.name"
+                      >
+                        <div class="font-style-preview" :style="style.style">{{ style.icon }}</div>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1029,14 +1174,14 @@ const backgroundStyle = computed(() => {
               <!-- 颜色控制组 -->
               <div class="control-group">
                 <div class="group-header">
-                  <el-icon class="text-orange-500 text-lg"><Brush /></el-icon>
+                  <el-icon class="text-orange-500 dark:text-orange-400 text-lg"><Brush /></el-icon>
                   <span class="group-title">颜色</span>
                 </div>
-                <div class="color-control relative" @click.stop>
+                <div class="color-control relative">
                   <button
                     class="color-btn"
                     title="选择歌词颜色"
-                    @click="toggleColorPicker"
+                    @click.stop="toggleColorPicker"
                   >
                     <div
                       class="color-preview"
@@ -1047,8 +1192,8 @@ const backgroundStyle = computed(() => {
 
                   <!-- 颜色选择面板 -->
                   <div
+                    v-if="showColorPicker"
                     class="color-picker-panel"
-                    :class="{ 'color-picker-visible': showColorPicker }"
                     @click.stop
                   >
                     <div class="color-grid">
@@ -1080,7 +1225,7 @@ const backgroundStyle = computed(() => {
                   class="reset-btn"
                   title="重置所有设置"
                 >
-                  <el-icon class="text-red-500 text-xl"><RefreshRight /></el-icon>
+                  <el-icon class="text-red-500 dark:text-red-400 text-xl"><RefreshRight /></el-icon>
                   <span class="reset-text">重置</span>
                 </button>
               </div>
@@ -1092,6 +1237,8 @@ const backgroundStyle = computed(() => {
       </main>
     </div>
   </div>
+
+
 </template>
 
 <style scoped lang="scss">
@@ -1119,14 +1266,14 @@ const backgroundStyle = computed(() => {
   }
 }
 
-// 黑胶唱片旋转动画
+// 黑胶唱片旋转动画 - 调慢速度更舒适
 .vinyl-spinning {
-  animation: vinyl-rotate 8s linear infinite;
+  animation: vinyl-rotate 15s linear infinite;
 }
 
-// 光效旋转动画
+// 光效旋转动画 - 比封面稍慢一些
 .vinyl-light-effect {
-  animation: vinyl-rotate 12s linear infinite;
+  animation: vinyl-rotate 20s linear infinite;
 }
 
 // 黑胶唱片容器样式
@@ -1278,6 +1425,8 @@ const backgroundStyle = computed(() => {
         text-align: center;
         letter-spacing: 0.5px;
       }
+
+
     }
 
     .control-buttons {
@@ -1325,6 +1474,8 @@ const backgroundStyle = computed(() => {
     }
   }
 
+
+
   .control-btn-decrease {
     .el-icon {
       color: #ef4444;
@@ -1335,6 +1486,8 @@ const backgroundStyle = computed(() => {
     }
   }
 
+
+
   .control-btn-increase {
     .el-icon {
       color: #22c55e;
@@ -1344,6 +1497,8 @@ const backgroundStyle = computed(() => {
       background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
     }
   }
+
+
 
   .control-btn-disabled {
     opacity: 0.4;
@@ -1369,6 +1524,8 @@ const backgroundStyle = computed(() => {
     text-align: center;
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
   }
+
+
 
   // 颜色控制样式
   .color-control {
@@ -1406,12 +1563,13 @@ const backgroundStyle = computed(() => {
         z-index: 1;
       }
     }
+  }
 
-    .color-picker-panel {
+  .color-picker-panel {
       position: absolute;
-      right: calc(100% + 12px);
-      top: 50%;
-      transform: translateY(-50%) translateX(10px);
+      top: -190%;
+      right: 100%;
+      margin-right: 20px;
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -1419,16 +1577,9 @@ const backgroundStyle = computed(() => {
       padding: 16px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
       border: 1px solid rgba(255, 255, 255, 0.5);
-      opacity: 0;
-      visibility: hidden;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 50;
-
-      &.color-picker-visible {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(-50%) translateX(0);
-      }
+      z-index: 1000;
+      // animation: slideInLeft 0.3s ease-out;
 
       .color-grid {
         display: grid;
@@ -1437,36 +1588,271 @@ const backgroundStyle = computed(() => {
         min-width: 120px;
       }
 
-      .color-option {
-        width: 32px;
-        height: 32px;
-        border-radius: 8px;
-        border: 2px solid rgba(255, 255, 255, 0.8);
+      // 分隔线样式
+      .font-style-divider {
+        height: 1px;
+        background: linear-gradient(90deg, transparent 0%, rgba(229, 231, 235, 0.5) 50%, transparent 100%);
+        margin: 12px 0;
+      }
+
+      // 字体样式选择网格
+      .font-style-grid {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        width: 100%;
+      }
+
+      // 字体样式选项
+      .font-style-option {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 2px solid rgba(229, 231, 235, 0.5);
         cursor: pointer;
         transition: all 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
         position: relative;
+        background: rgba(255, 255, 255, 0.8);
+        flex-shrink: 0;
 
         &:hover {
           transform: scale(1.1);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        &.font-style-option-active {
+          border-color: #4338ca;
+          box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
+          background: rgba(99, 102, 241, 0.1);
+          transform: scale(1.05);
+
+          .font-style-preview {
+            color: #4338ca !important;
+            font-weight: 700;
+          }
+        }
+
+        .font-style-preview {
+          color: #374151;
+          font-size: 14px;
+          font-weight: 600;
+          line-height: 1;
+          font-family: 'Arial', sans-serif;
+        }
+      }
+
+      .color-option {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: 2px solid rgba(229, 231, 235, 0.5);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        background: rgba(255, 255, 255, 0.8);
+
+        &:hover {
+          transform: scale(1.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .font-preview {
+          color: #374151;
+          font-size: 16px;
+          font-weight: 500;
+          line-height: 1;
         }
 
         &.color-option-active {
-          border-color: #374151;
-          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-        }
+          border-color: #4338ca;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.4);
+          background: rgba(99, 102, 241, 0.1);
+          transform: scale(1.05);
 
-        .color-check {
-          color: white;
-          font-size: 14px;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+          .font-preview {
+            color: #4338ca !important;
+            font-weight: 700;
+            transform: scale(1.1);
+          }
         }
       }
     }
   }
+
+  // 字体选择面板特定样式
+  .font-picker-panel {
+    top: 70% !important;
+    transform: translateY(-50%);
+  }
+
+// 深色模式下的颜色控制样式
+.dark .color-control {
+  .color-btn {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .color-preview {
+      border: 2px solid rgba(229, 231, 235, 0.9);
+    }
+
+    .color-icon {
+      color: #9ca3af;
+    }
+  }
+
+  .color-picker-panel {
+    background: rgba(55, 65, 81, 0.95);
+    border: 1px solid rgba(75, 85, 99, 0.5);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+
+    .color-option {
+      border: 2px solid rgba(75, 85, 99, 0.8);
+      background: rgba(75, 85, 99, 0.3);
+
+      &:hover {
+        border-color: rgba(129, 140, 248, 0.6);
+        background: rgba(129, 140, 248, 0.1);
+      }
+
+      &.color-option-active {
+        border-color: #818cf8;
+        box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.5);
+        background: rgba(129, 140, 248, 0.2);
+
+        .font-preview {
+          color: #e0e7ff !important;
+          font-weight: 700;
+          transform: scale(1.1);
+        }
+      }
+
+      .font-preview {
+        color: #e5e7eb;
+      }
+    }
+
+    // 深色模式下的分隔线
+    .font-style-divider {
+      background: linear-gradient(90deg, transparent 0%, rgba(75, 85, 99, 0.5) 50%, transparent 100%);
+    }
+
+    // 深色模式下的字体样式选项
+    .font-style-option {
+      border: 2px solid rgba(75, 85, 99, 0.8);
+      background: rgba(75, 85, 99, 0.3);
+
+      &:hover {
+        border-color: rgba(129, 140, 248, 0.6);
+        background: rgba(129, 140, 248, 0.1);
+      }
+
+      &.font-style-option-active {
+        border-color: #818cf8;
+        box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.5);
+        background: rgba(129, 140, 248, 0.2);
+
+        .font-style-preview {
+          color: #e0e7ff !important;
+          font-weight: 700;
+        }
+      }
+
+      .font-style-preview {
+        color: #e5e7eb;
+      }
+    }
+  }
+
+  // 深色模式下的字体选择面板特定样式
+  .font-picker-panel {
+    top: 70% !important;
+    transform: translateY(-50%);
+  }
+
+  // 字体控制样式
+  .font-control {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .font-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      }
+
+      &:active {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .font-preview {
+        font-size: 18px;
+        font-weight: 600;
+        color: #4338ca;
+        transition: all 0.2s ease;
+      }
+
+      &:hover .font-preview {
+        transform: scale(1.1);
+      }
+    }
+  }
+
+// 深色模式下的字体控制样式
+.dark .font-control {
+  .font-btn {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+    &:hover {
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    }
+
+    .font-preview {
+      color: #818cf8;
+    }
+  }
+
+  // 深色模式下的字体预览样式
+  .font-preview {
+    color: #e5e7eb;
+  }
+}
+
+// 字体预览样式
+.font-preview {
+  font-size: 16px;
+  font-weight: 500;
+  color: #374151;
+  line-height: 1;
+}
 
   // 重置按钮样式
   .reset-btn {
@@ -1501,6 +1887,8 @@ const backgroundStyle = computed(() => {
       letter-spacing: 0.3px;
     }
   }
+
+
 }
 
 // 分隔线样式
@@ -1541,19 +1929,19 @@ const backgroundStyle = computed(() => {
 .lyrics-progress-slider {
   :deep(.el-slider__runway) {
     background-color: #e5e7eb;
-    height: 2px;
-    border-radius: 1px;
+    height: 4px;
+    border-radius: 2px;
   }
 
   :deep(.el-slider__bar) {
     background-color: #3b82f6;
-    height: 2px;
-    border-radius: 1px;
+    height: 4px;
+    border-radius: 2px;
   }
 
   :deep(.el-slider__button) {
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     border: 2px solid #3b82f6;
     background-color: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -1566,23 +1954,44 @@ const backgroundStyle = computed(() => {
   }
 }
 
+// 深色模式下的进度条样式
+.dark .lyrics-progress-slider {
+  :deep(.el-slider__runway) {
+    background-color: #4b5563;
+  }
+
+  :deep(.el-slider__bar) {
+    background-color: #60a5fa;
+  }
+
+  :deep(.el-slider__button) {
+    border: 2px solid #60a5fa;
+    background-color: #1f2937;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+    &:hover {
+      box-shadow: 0 4px 8px rgba(96, 165, 250, 0.4);
+    }
+  }
+}
+
 // 音量滑块样式
 .lyrics-volume-slider {
   :deep(.el-slider__runway) {
     background-color: #e5e7eb;
-    height: 2px;
-    border-radius: 1px;
+    height: 3px;
+    border-radius: 1.5px;
   }
 
   :deep(.el-slider__bar) {
     background-color: #6b7280;
-    height: 2px;
-    border-radius: 1px;
+    height: 3px;
+    border-radius: 1.5px;
   }
 
   :deep(.el-slider__button) {
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     border: 2px solid #6b7280;
     background-color: white;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -1591,6 +2000,27 @@ const backgroundStyle = computed(() => {
     &:hover {
       transform: scale(1.1);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+  }
+}
+
+// 深色模式下的音量滑块样式
+.dark .lyrics-volume-slider {
+  :deep(.el-slider__runway) {
+    background-color: #4b5563;
+  }
+
+  :deep(.el-slider__bar) {
+    background-color: #9ca3af;
+  }
+
+  :deep(.el-slider__button) {
+    border: 2px solid #9ca3af;
+    background-color: #1f2937;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+    &:hover {
+      box-shadow: 0 2px 6px rgba(156, 163, 175, 0.4);
     }
   }
 }
@@ -1764,31 +2194,67 @@ button[title="下一首"]:hover {
   }
 }
 
-/* 黑胶唱片旋转动画 */
-@keyframes vinyl-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.vinyl-spinning {
-  animation: vinyl-spin 3s linear infinite;
-}
-
-/* 黑胶唱片光效动画 */
-@keyframes vinyl-light {
+/* 上浮动画 */
+@keyframes fadeInUp {
   0% {
-    transform: rotate(0deg);
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(0.95);
   }
   100% {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
   }
 }
 
-.vinyl-light-effect {
-  animation: vinyl-light 4s linear infinite;
+/* 左侧滑入动画 */
+@keyframes slideInLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
 }
+
+/* 从左侧滑入动画 */
+@keyframes slideInFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-30px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+/* 右侧滑入动画 */
+@keyframes slideInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+/* 检查图标脉冲动画 */
+@keyframes checkPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 黑胶唱片旋转动画 */
+
 </style>

@@ -74,6 +74,11 @@ const handleQualityChange = (val: any) => {
   audio.setAudioStore('quality', val)
 }
 
+// 处理播放列表双击行为变更
+const handlePlaylistBehaviorChange = (val: 'replace' | 'add') => {
+  setting.setSettingState('playlistDoubleClickBehavior', val)
+}
+
 
 </script>
 <template>
@@ -219,6 +224,57 @@ const handleQualityChange = (val: any) => {
             </div>
             <el-switch disabled />
           </div>
+
+          <div class="space-y-3">
+            <div class="flex items-center space-x-2">
+              <icon-material-symbols:playlist-play />
+              <label class="text-sm font-medium leading-none">双击行为</label>
+            </div>
+            <div class="space-y-3">
+              <p class="text-xs text-foreground/70">
+                设置双击歌曲时的播放行为：替换当前播放列表或添加到播放列表
+              </p>
+              <div class="space-y-4">
+                <div
+                  class="radio-option flex items-center space-x-4 p-4 rounded-xl border transition-all duration-300 cursor-pointer"
+                  :class="setting.playlistDoubleClickBehavior === 'replace' ? 'radio-option-selected' : 'radio-option-default'"
+                  @click="setting.playlistDoubleClickBehavior = 'replace'; handlePlaylistBehaviorChange('replace')"
+                >
+                  <el-radio
+                    v-model="setting.playlistDoubleClickBehavior"
+                    value="replace"
+                    class="pointer-events-none"
+                  />
+                  <div class="flex items-center space-x-3 flex-1">
+                    <icon-material-symbols:playlist-remove class="text-red-500 text-xl flex-shrink-0" />
+                    <div class="flex-1 min-w-0">
+                      <h4 class="text-sm font-semibold text-foreground mb-1">替换播放列表</h4>
+                      <p class="text-xs text-muted-foreground leading-relaxed">用当前歌曲列表替换整个播放列表</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="radio-option flex items-center space-x-4 p-4 rounded-xl border transition-all duration-300 cursor-pointer"
+                  :class="setting.playlistDoubleClickBehavior === 'add' ? 'radio-option-selected' : 'radio-option-default'"
+                  @click="setting.playlistDoubleClickBehavior = 'add'; handlePlaylistBehaviorChange('add')"
+                >
+                  <el-radio
+                    v-model="setting.playlistDoubleClickBehavior"
+                    value="add"
+                    class="pointer-events-none"
+                  />
+                  <div class="flex items-center space-x-3 flex-1">
+                    <icon-material-symbols:playlist-add class="text-green-500 text-xl flex-shrink-0" />
+                    <div class="flex-1 min-w-0">
+                      <h4 class="text-sm font-semibold text-foreground mb-1">添加到播放列表</h4>
+                      <p class="text-xs text-muted-foreground leading-relaxed">仅将当前歌曲添加到播放列表末尾</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -335,5 +391,41 @@ const handleQualityChange = (val: any) => {
 .wallpaper-upload {
   position: relative;
   display: inline-block;
+}
+
+/* 单选按钮选项样式 */
+.radio-option-default {
+  border-color: rgb(229 231 235 / 0.3);
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.radio-option-default:hover {
+  border-color: rgb(99 102 241 / 0.4);
+  box-shadow: 0 0 0 1px rgb(99 102 241 / 0.1);
+}
+
+.radio-option-selected {
+  border-color: rgb(99 102 241);
+  background-color: transparent;
+  box-shadow: 0 0 0 1px rgb(99 102 241 / 0.2);
+}
+
+.radio-option-selected:hover {
+  border-color: rgb(99 102 241);
+  box-shadow: 0 0 0 2px rgb(99 102 241 / 0.3);
+}
+
+/* 单选按钮样式优化 */
+:deep(.el-radio) {
+  margin-right: 0 !important;
+}
+
+:deep(.el-radio__input) {
+  margin-right: 0 !important;
+}
+
+:deep(.el-radio__label) {
+  display: none !important; /* 隐藏默认标签，使用自定义布局 */
 }
 </style>

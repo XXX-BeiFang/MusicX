@@ -23,6 +23,21 @@ export const settingStore = defineStore({
         wallpaperType: 'none',
         wallpaperOpacity: 0.8,
         wallpaperBlur: 0, // 默认无模糊
+        // 播放列表双击行为
+        playlistDoubleClickBehavior: 'add', // 默认添加到当前播放列表
+        // 音质设置
+        audioQuality: 'higher', // 默认高品质
+        // 播放设置
+        autoPlay: true,
+        crossfade: false,
+        gaplessPlayback: true,
+        // 显示设置
+        showDesktopLyrics: false,
+        enableNotifications: true,
+        // 音效设置
+        bassBoost: 0,
+        trebleBoost: 0,
+        virtualSurround: false,
     }),
     actions: {
         // Set SettingState

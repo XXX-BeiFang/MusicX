@@ -42,6 +42,15 @@ export const AudioStore = defineStore({
         deleteTrack(id: number | string) {
             this.trackList = this.trackList.filter((track: { id: string | number; }) => track.id !== id)
         },
+        // 替换播放列表
+        replaceTracks(newTracks: trackModel | trackModel[], playIndex: number = 0) {
+            // 将参数归一化为数组
+            const tracksToReplace = Array.isArray(newTracks) ? newTracks : [newTracks]
+            // 替换整个播放列表
+            this.trackList = tracksToReplace
+            // 设置播放索引
+            this.currentSongIndex = Math.max(0, Math.min(playIndex, tracksToReplace.length - 1))
+        },
     },
     persist: piniaPersistConfig('AudioStore'),
 })

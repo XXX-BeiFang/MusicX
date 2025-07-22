@@ -58,6 +58,10 @@ const router = createRouter({
       path: '/charts',
       component: () => import('@/pages/charts/index.vue'),
     },
+    {
+      path: '/test-playlist',
+      component: () => import('@/pages/test-playlist.vue'),
+    },
   ],
 })
 

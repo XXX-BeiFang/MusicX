@@ -10,6 +10,7 @@ import {
 } from '@/api'
 import rootGedanImg from '@/assets/root_gedan.jpg'
 import { Icon } from '@iconify/vue'
+import { settingStore } from '@/stores/modules/setting'
 
 type ChartItem = {
   id: number
@@ -20,6 +21,7 @@ type ChartItem = {
 
 const router = useRouter()
 const audio = AudioStore()
+const setting = settingStore()
 
 const { loadTrack, play } = useAudioPlayer()
 
@@ -268,11 +270,21 @@ onUnmounted(() => {
   stopAutoPlay() // 清理定时器
 })
 
-const handlePlaylclick = async (row: any) => {
+const handlePlaylclick = async (row: any, chartSongs?: any[]) => {
   // 转换歌曲实体
   const track = convertToTrackModel(row)
-  // 添加到播放列表
-  audio.addTracks(track)
+
+  // 根据设置决定播放行为
+  if (setting.playlistDoubleClickBehavior === 'replace' && chartSongs) {
+    // 替换播放列表模式：将当前歌曲列表替换为播放列表
+    const allTracks = chartSongs.map(song => convertToTrackModel(song))
+    const currentIndex = chartSongs.findIndex(song => song.id === row.id)
+    audio.replaceTracks(allTracks, currentIndex)
+  } else {
+    // 添加模式：仅添加当前歌曲到播放列表
+    audio.addTracks(track)
+  }
+
   // 播放
   await loadTrack()
   play()
@@ -608,7 +620,7 @@ const navigateToBanner = (item: any) => {
                 <div
                   v-for="(song, index) in chart.songs"
                   :key="index"
-                  @dblclick="handlePlaylclick(song)"
+                  @dblclick="handlePlaylclick(song, chart.songs)"
                   class="flex p-2 items-center space-x-3 hover:bg-white/30 dark:hover:bg-black/30 rounded-lg transition-all duration-200 cursor-pointer group hover:scale-105"
                 >
                   <span

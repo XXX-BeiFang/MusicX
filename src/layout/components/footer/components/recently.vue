@@ -1,13 +1,25 @@
 <script setup lang="ts">
 import { formatMillisecondsToTime } from '@/utils'
 import { trackModel } from '@/stores/interface'
+import { settingStore } from '@/stores/modules/setting'
+
 const audio = AudioStore()
+const setting = settingStore()
 const { loadTrack, play, audioElement } = useAudioPlayer()
 
 const mouseOverIndex = ref(-1) // 用于跟踪鼠标悬停的索引
 
 const playMusic = async (song: trackModel) => {
-  audio.addTracks(song)
+  // 根据设置决定播放行为
+  if (setting.playlistDoubleClickBehavior === 'replace') {
+    // 替换播放列表模式：将当前播放列表替换为播放列表
+    const currentIndex = audio.trackList.findIndex((track: trackModel) => track.id === song.id)
+    audio.replaceTracks(audio.trackList, currentIndex)
+  } else {
+    // 添加模式：仅添加当前歌曲到播放列表
+    audio.addTracks(song)
+  }
+
   // 加载
   await loadTrack()
   play()

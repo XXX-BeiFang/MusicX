@@ -12,3 +12,10 @@ declare interface ViteEnv {
 interface ImportMetaEnv extends ViteEnv {
     __: unknown;
 }
+
+// Vue single-file component shim for TypeScript
+declare module '*.vue' {
+    import type { DefineComponent } from 'vue'
+    const component: DefineComponent<{}, {}, any>
+    export default component
+}

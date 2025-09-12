@@ -130,7 +130,7 @@ export const AudioPlayer = () => {
         let extension = '';
         try {
             const urlObj = new URL(url.startsWith('//') ? 'https:' + url : url);
-            const pathname = urlObj.pathname;
+            const pathname = urlObj.pathname || '';
             extension = pathname.split('.').pop()?.toLowerCase() || '';
         } catch (e) {
             console.warn('无法解析URL:', url);
@@ -419,15 +419,15 @@ export const AudioPlayer = () => {
                 const response = await urlV1(currentTrack.value.id);
 
                 // 尝试获取多个可用的URL，按音质排序
-                const urls = response.data?.filter(item => item?.url && item.url !== '') || [];
+                const urls = (response?.data || []).filter((item: any) => item?.url && item.url !== '') || [];
 
                 if (urls.length === 0) {
                     console.warn('未获取到有效的音频URL');
                     throw new Error('该歌曲暂时无法播放，可能是版权限制');
                 }
 
-                // 按音质排序，优先选择高音质
-                urls.sort((a, b) => (b.br || 0) - (a.br || 0));
+                // 按音质或码率排序，优先选择高音质
+                urls.sort((a: any, b: any) => (b.br || 0) - (a.br || 0));
 
                 // 选择第一个有效的URL，并保存备用URL
                 let url = urls[0].url;

@@ -114,11 +114,8 @@ onMounted(async () => {
       const bannerData = bannerResult.value as any
       if (bannerData && bannerData.banners && Array.isArray(bannerData.banners)) {
         bannerList.value = bannerData.banners.slice(0, 12) // 取前12个轮播图
-        // 启动自动轮播
-        nextTick(() => {
-          startAutoPlay()
-        })
       } else {
+        console.log('原始轮播图数据:', bannerData)
         console.warn('轮播图数据格式异常:', bannerData)
       }
     } else {
@@ -131,6 +128,7 @@ onMounted(async () => {
       if (personalizedData && personalizedData.result && Array.isArray(personalizedData.result)) {
         personalizedList.value = personalizedData.result.slice(0, 4) // 取前4个推荐
       } else {
+        console.log('原始个性化推荐数据:', personalizedData)
         console.warn('个性化推荐数据格式异常:', personalizedData)
       }
     } else {

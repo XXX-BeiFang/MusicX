@@ -56,7 +56,7 @@ export const settingStore = defineStore({
             // 转换为 RGB 格式并设置
             const hexToRgb = (hex: string) => {
                 // 移除 # 号
-                hex = hex.replace('#', '');
+                hex = (hex || '').replace('#', '');
 
                 // 处理缩写形式（例如 #fff）
                 if (hex.length === 3) {

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二维码登录调试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .qr-image {
+            max-width: 200px;
+            max-height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .response {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 二维码登录调试工具</h1>
+        
+        <div class="step">
+            <h3>📡 API 配置信息</h3>
+            <p><strong>远程API:</strong> https://beifang.dpdns.org</p>
+            <p><strong>前端地址:</strong> <span id="currentUrl"></span></p>
+            <p><strong>代理路径:</strong> /api → https://beifang.dpdns.org</p>
+        </div>
+
+        <div class="step">
+            <h3>步骤1: 获取二维码Key</h3>
+            <button onclick="testGetKey()">获取Key</button>
+            <div id="keyStatus" class="status" style="display: none;"></div>
+            <div id="keyResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <div class="step">
+            <h3>步骤2: 生成二维码</h3>
+            <button onclick="testCreateQr()" id="createBtn" disabled>生成二维码</button>
+            <div id="qrStatus" class="status" style="display: none;"></div>
+            <img id="qrImage" class="qr-image" style="display: none;" alt="二维码">
+            <div id="qrResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <div class="step">
+            <h3>步骤3: 检查状态</h3>
+            <button onclick="testCheckStatus()" id="checkBtn" disabled>检查状态</button>
+            <button onclick="startPolling()" id="pollBtn" disabled>开始轮询</button>
+            <button onclick="stopPolling()" id="stopBtn" disabled>停止轮询</button>
+            <div id="statusStatus" class="status" style="display: none;"></div>
+            <div id="statusResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <div class="step">
+            <h3>🚀 一键测试</h3>
+            <button onclick="runFullTest()" id="fullBtn">运行完整测试</button>
+            <div id="fullStatus" class="status" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('currentUrl').textContent = window.location.origin;
+        
+        let qrKey = '';
+        let pollingInterval = null;
+
+        function showStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `status ${type}`;
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+
+        function showResponse(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.style.display = 'block';
+        }
+
+        async function testGetKey() {
+            try {
+                showStatus('keyStatus', '正在获取二维码Key...', 'info');
+                
+                const response = await fetch(`/api/login/qr/key?timestamp=${Date.now()}`);
+                const data = await response.json();
+                
+                console.log('Key API 响应:', data);
+                showResponse('keyResponse', data);
+                
+                // 根据修复后的逻辑检查响应
+                if (data && data.data && data.data.unikey) {
+                    qrKey = data.data.unikey;
+                    showStatus('keyStatus', `✅ 成功获取Key: ${qrKey}`, 'success');
+                    document.getElementById('createBtn').disabled = false;
+                } else if (data && data.unikey) {
+                    qrKey = data.unikey;
+                    showStatus('keyStatus', `✅ 成功获取Key: ${qrKey}`, 'success');
+                    document.getElementById('createBtn').disabled = false;
+                } else {
+                    throw new Error('响应格式不正确或缺少unikey');
+                }
+            } catch (error) {
+                console.error('获取Key失败:', error);
+                showStatus('keyStatus', `❌ 获取Key失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCreateQr() {
+            if (!qrKey) {
+                showStatus('qrStatus', '❌ 请先获取二维码Key', 'error');
+                return;
+            }
+
+            try {
+                showStatus('qrStatus', '正在生成二维码...', 'info');
+                
+                const response = await fetch(`/api/login/qr/create?key=${qrKey}&qrimg=true&timestamp=${Date.now()}`);
+                const data = await response.json();
+                
+                console.log('二维码 API 响应:', data);
+                showResponse('qrResponse', data);
+                
+                // 根据修复后的逻辑检查响应
+                let qrimg = null;
+                if (data && data.data && data.data.qrimg) {
+                    qrimg = data.data.qrimg;
+                } else if (data && data.qrimg) {
+                    qrimg = data.qrimg;
+                } else if (data && data.data && data.data.qrurl) {
+                    const qrurl = data.data.qrurl;
+                    qrimg = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrurl)}`;
+                } else if (data && data.qrurl) {
+                    const qrurl = data.qrurl;
+                    qrimg = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrurl)}`;
+                }
+                
+                if (qrimg) {
+                    const qrImage = document.getElementById('qrImage');
+                    qrImage.src = qrimg;
+                    qrImage.style.display = 'block';
+                    showStatus('qrStatus', '✅ 二维码生成成功！请使用网易云音乐APP扫描', 'success');
+                    document.getElementById('checkBtn').disabled = false;
+                    document.getElementById('pollBtn').disabled = false;
+                } else {
+                    throw new Error('无法获取二维码图片');
+                }
+            } catch (error) {
+                console.error('生成二维码失败:', error);
+                showStatus('qrStatus', `❌ 生成二维码失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCheckStatus() {
+            if (!qrKey) {
+                showStatus('statusStatus', '❌ 请先获取二维码Key', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/login/qr/check?key=${qrKey}&timestamp=${Date.now()}`);
+                const data = await response.json();
+                
+                console.log('状态检查 API 响应:', data);
+                showResponse('statusResponse', data);
+                
+                const statusMessages = {
+                    800: '❌ 二维码已过期',
+                    801: '⏳ 等待扫码',
+                    802: '📱 待确认',
+                    803: '✅ 登录成功'
+                };
+                
+                const message = statusMessages[data.code] || `状态码: ${data.code}`;
+                showStatus('statusStatus', message, data.code === 803 ? 'success' : 'info');
+                
+                if (data.code === 803) {
+                    stopPolling();
+                    showStatus('statusStatus', '🎉 登录成功！', 'success');
+                } else if (data.code === 800) {
+                    stopPolling();
+                    showStatus('statusStatus', '⏰ 二维码已过期，请重新获取', 'error');
+                }
+            } catch (error) {
+                console.error('检查状态失败:', error);
+                showStatus('statusStatus', `❌ 检查状态失败: ${error.message}`, 'error');
+            }
+        }
+
+        function startPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+            
+            pollingInterval = setInterval(testCheckStatus, 3000);
+            document.getElementById('pollBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            showStatus('statusStatus', '🔄 开始轮询扫码状态...', 'info');
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+            document.getElementById('pollBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+
+        async function runFullTest() {
+            try {
+                document.getElementById('fullBtn').disabled = true;
+                showStatus('fullStatus', '🚀 开始完整测试...', 'info');
+
+                // 步骤1
+                await testGetKey();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // 步骤2
+                if (qrKey) {
+                    await testCreateQr();
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // 步骤3
+                    startPolling();
+                    showStatus('fullStatus', '✅ 完整测试启动成功！请扫描二维码', 'success');
+                } else {
+                    throw new Error('获取Key失败');
+                }
+            } catch (error) {
+                showStatus('fullStatus', `❌ 完整测试失败: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('fullBtn').disabled = false;
+            }
+        }
+
+        // 页面卸载时清理轮询
+        window.addEventListener('beforeunload', stopPolling);
+    </script>
+</body>
+</html>

@@ -12,7 +12,20 @@ type ProxyTargetList = Record<string, ProxyOptions>;
  */
 export function createProxy(list: ProxyList = []) {
     const ret: ProxyTargetList = {};
-    for (const [prefix, target] of list) {
+    for (const item of list) {
+        if (!Array.isArray(item) || item.length < 2) {
+            continue;
+        }
+        const [prefix, target] = item;
+        if (typeof prefix !== "string" || typeof target !== "string") {
+            continue;
+        }
+        const isValidTarget = /^(https?:)\/\//i.test(target.trim());
+        if (!isValidTarget) {
+            // 跳过非法 target，防止 Vite 启动时报错
+            continue;
+        }
+
         const httpsRE = /^https:\/\//;
         const isHttps = httpsRE.test(target);
 

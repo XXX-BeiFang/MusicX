@@ -6,8 +6,18 @@ import axios, {
 import { ElNotification } from "element-plus";
 import NProgress from '@/config/nprogress'
 
+// 允许通过 localStorage 临时覆盖 API 基址，便于在无法写入 .env 时快速切换到外部代理
+const fallbackBaseUrl = ((): string => {
+    try {
+        const override = localStorage.getItem('API_BASE_URL_OVERRIDE') || ''
+        return override || import.meta.env.VITE_APP_BASE_API || '/api'
+    } catch {
+        return import.meta.env.VITE_APP_BASE_API || '/api'
+    }
+})()
+
 const instance: AxiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_APP_BASE_API,
+    baseURL: fallbackBaseUrl,
     timeout: 15000, // 减少超时时间到15秒，提高响应速度
     withCredentials: true,
     // 添加重试配置
@@ -22,6 +32,15 @@ instance.interceptors.request.use(
         NProgress.start()
         if (config.params === undefined) {
             config.params = {}
+        }
+        // 规范化 URL：对相对路径自动补全前导斜杠，避免与 baseURL 直连时拼接错误
+        if (typeof config.url === 'string') {
+            const url = config.url.trim()
+            const isAbsolute = /^(https?:)?\/\//i.test(url)
+            const hasLeadingSlash = url.startsWith('/')
+            if (!isAbsolute && !hasLeadingSlash) {
+                config.url = `/${url}`
+            }
         }
         // 不再添加额外参数，可能导致API请求失败
         return config

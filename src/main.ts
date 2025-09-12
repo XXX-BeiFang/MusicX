@@ -62,6 +62,21 @@ window.addEventListener('unhandledrejection', event => {
 
 app.mount('#app')
 
+// 在开发环境下，确保未启用的 PWA Service Worker 被卸载，避免控制台 404/manifest 报错
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  // 注销已注册的所有 Service Worker
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    regs.forEach((reg) => reg.unregister().catch(() => {}))
+  })
+  // 清理可能的 PWA 相关缓存，防止旧缓存导致异常请求
+  caches?.keys?.().then((keys) => {
+    keys
+      .filter((k) => /workbox|vite-pwa|pwa/i.test(k))
+      .forEach((k) => caches.delete(k).catch(() => {}))
+  })
+}
+
+
 // 应用保存的主题颜色和深色模式
 const settings = settingStore();
 if (settings.themeColor) {
@@ -73,6 +88,15 @@ settings.applyDarkMode();
 // 检查 View Transitions API 支持状态
 import { logViewTransitionSupport } from '@/utils/viewTransitionSupport'
 logViewTransitionSupport();
+
+// 在开发环境下导入登录测试工具
+if (import.meta.env.DEV) {
+  import('@/test/login-test').then(module => {
+    console.log('登录测试工具已加载，可在控制台使用 window.loginTest')
+  }).catch(err => {
+    console.warn('登录测试工具加载失败:', err)
+  })
+}
 
 // 注册PWA Service Worker - 暂时禁用
 /*

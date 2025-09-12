@@ -26,7 +26,7 @@ const processStreamResponse = async (
       if (done) break
 
       const chunk = decoder.decode(value, { stream: true })
-      const lines = chunk.split('\n').filter((line) => line.trim())
+      const lines = (chunk || '').split('\n').filter((line) => line.trim())
 
       for (const line of lines) {
         if (line.startsWith('data: ')) {

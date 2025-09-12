@@ -237,8 +237,26 @@ export namespace API {
     }
     // 二维码检查接口
     export interface CheckQR extends Code {
-        cookie: string;
-        message: string;
+        cookie?: string;
+        message?: string;
+        avatarUrl?: string;
+        nickname?: string;
+    }
+
+    // 二维码生成接口响应
+    export interface QrCreateResponse extends Code {
+        data: {
+            qrurl: string;
+            qrimg?: string;
+        };
+    }
+
+    // 二维码Key生成接口响应
+    export interface QrKeyResponse extends Code {
+        data: {
+            code: number;
+            unikey: string;
+        };
     }
 
     // 播放列表曲目类型

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import * as Avatar from './components/avatar.vue'
+import Avatar from './components/avatar.vue'
 import { ref } from 'vue'
 import ThemeSelector from '@/components/ThemeSelector.vue'
 import { settingStore } from '@/stores/modules/setting'
@@ -85,7 +85,7 @@ const headerStyle = computed(() => {
         />
       </button>
 
-      <Avatar.default />
+      <Avatar />
     </div>
   </header>
 </template>

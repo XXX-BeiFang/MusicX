@@ -23,7 +23,7 @@ export const cloudsearch = <T>({
 }: API.SearchParams) => {
   const { limit: calculatedLimit, offset: calculatedOffset } =
     calculatePagination({ limit, offset })
-  return httpGet<API.ResultRes<T>>('cloudsearch', {
+  return httpGet<API.ResultRes<T>>('/cloudsearch', {
     keywords: kw,
     limit: calculatedLimit,
     offset: calculatedOffset,
@@ -40,9 +40,28 @@ export const personalized = (params: { limit?: number } = {}) => {
 }
 
 // 获取音乐连接
-export const urlV1 = (id: number | string) => {
+export const urlV1 = async (id: number | string) => {
   const audio = AudioStore()
-  return httpGet<{ data: { url: string }[] }>(`song/url/v1?id=${id}&level=${audio.quality}`)
+
+  // 优先按当前质量请求 /song/url/v1
+  const tryLevels = [audio.quality, 'exhigh', 'higher', 'standard', 'low'].filter(Boolean)
+  const realIP = '116.25.146.177'
+
+  for (const level of tryLevels) {
+    try {
+      const res = await httpGet<{ data: { url: string }[] }>(`/song/url/v1?id=${id}&level=${level}&realIP=${realIP}`)
+      if (res && Array.isArray(res.data)) return res
+    } catch {}
+  }
+
+  // 兜底使用 /song/url（旧接口）
+  try {
+    const res = await httpGet<{ data: { url: string }[] }>(`/song/url?id=${id}&realIP=${realIP}`)
+    if (res && Array.isArray(res.data)) return res
+  } catch {}
+
+  // 最终兜底返回空结构，调用方会处理
+  return { data: [] as { url: string }[] } as any
 }
 
 // 获取歌单详情
@@ -136,29 +155,133 @@ export const lyricNew = (id: number | string) => {
 
 // 二维码 key 生成接口
 export const loginQrKey = () => {
-  return httpGet<API.ResultData<{ unikey: string }>>('/login/qr/key')
+  const query = createQueryString({
+    timestamp: Date.now()
+  })
+  return httpGet<API.QrKeyResponse>(`/login/qr/key?${query}`)
 }
 
 // 二维码生成接口
 export const loginQrCreate = (key: string) => {
   const query = createQueryString({
     key,
-    qrimg: true
+    qrimg: true,
+    timestamp: Date.now()
   })
-  return httpGet<API.ResultData>(`/login/qr/create?${query}`)
+  return httpGet<API.QrCreateResponse>(`/login/qr/create?${query}`)
 }
 
 // 二维码检测扫码状态接口
 export const loginQrCheck = (key: string) => {
-  const query = createQueryString({ key })
+  const query = createQueryString({
+    key,
+    timestamp: Date.now()
+  })
   return httpGet<API.CheckQR>(`/login/qr/check?${query}`)
 }
 
 // 登录状态
 export const loginStatus = () => httpGet<API.ResultData>('/login/status')
 
+// 刷新登录（返回新的 cookie）
+export const loginRefresh = () => {
+  const query = createQueryString({ timestamp: Date.now() })
+  return httpGet<API.ResultData>(`/login/refresh?${query}`)
+}
+
+// 获取账号信息
+export const userAccount = () => httpGet<API.ResultData>(`/user/account?timestamp=${Date.now()}`)
+
+// 获取用户详情
+export const userDetail = (uid: number | string) => httpGet<API.ResultData>(`/user/detail?uid=${uid}&timestamp=${Date.now()}`)
+
+// 获取用户信息统计
+export const userSubcount = () => httpGet<API.ResultData>(`/user/subcount?timestamp=${Date.now()}`)
+
 // 退出登录
 export const logout = () => httpGet('/logout')
+
+// 手机号登录（支持密码/MD5密码/验证码）
+// 手机号登录（POST 兼容，有些部署要求用 POST）
+export const loginCellphonePost = (params: {
+  phone: string
+  password?: string
+  md5_password?: string
+  countrycode?: number | string
+  ctcode?: number | string
+  captcha?: string
+  rememberLogin?: string | boolean
+}) => {
+  const payload = new URLSearchParams()
+  // 确保参数格式正确，特别是针对beifang.dpdns.org的要求
+  const finalParams = {
+    ...params,
+    timestamp: Date.now(),
+    rememberLogin: params.rememberLogin ?? 'true',
+    // 添加可能需要的安全验证参数
+    ...(params.countrycode && { countrycode: String(params.countrycode) }),
+    ...(params.ctcode && { ctcode: String(params.ctcode) })
+  }
+
+  Object.entries(finalParams)
+    .filter(([_, v]) => v != null && v !== undefined)
+    .forEach(([k, v]) => payload.append(k, String(v)))
+
+  return httpPost<API.ResultData>(`/login/cellphone`, payload, {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  })
+}
+
+export const loginCellphone = (params: {
+  phone: string
+  password?: string
+  md5_password?: string
+  countrycode?: number | string
+  ctcode?: number | string
+  captcha?: string
+}) => {
+  // 确保参数格式正确
+  const finalParams = {
+    ...params,
+    timestamp: Date.now(),
+    // 确保国家代码格式正确
+    ...(params.countrycode && { countrycode: String(params.countrycode) }),
+    ...(params.ctcode && { ctcode: String(params.ctcode) })
+  }
+
+  const query = createQueryString(finalParams)
+  return httpGet<API.ResultData>(`/login/cellphone?${query}`)
+}
+
+// 发送验证码（可选 ctcode 国家区号，默认 86）
+export const captchaSent = (phone: string, ctcode?: string | number) => {
+  const params = {
+    phone,
+    ctcode: ctcode || '86',
+    timestamp: Date.now()
+  }
+  const query = createQueryString(params)
+  return httpGet<API.ResultData>(`/captcha/sent?${query}`)
+}
+
+// 验证验证码
+export const captchaVerify = (params: { phone: string; captcha: string; ctcode?: string | number }) => {
+  const finalParams = {
+    ...params,
+    ctcode: params.ctcode || '86',
+    timestamp: Date.now()
+  }
+  const query = createQueryString(finalParams)
+  return httpGet<API.ResultData>(`/captcha/verify?${query}`)
+}
+
+// 检测手机号是否注册
+export const cellphoneExistenceCheck = (params: { phone: string; countrycode?: string | number }) => {
+  const query = createQueryString({ ...params, timestamp: Date.now() })
+  return httpGet<API.ResultData>(`/cellphone/existence/check?${query}`)
+}
 
 // 歌单评论
 export const commentPlaylist = (params: API.CommentMVParams) => {

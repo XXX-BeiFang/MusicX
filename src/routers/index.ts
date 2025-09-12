@@ -1,15 +1,19 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
 
 
-const mode = import.meta.env.VITE_ROUTER_MODE;
+// 读取并规范化路由模式，缺省或非法值时回退为 'hash'
+const mode = (import.meta.env.VITE_ROUTER_MODE || 'hash') as string
+const normalizedMode = typeof mode === 'string' ? mode.toLowerCase() : 'hash'
 
 const routerMode = {
   hash: () => createWebHashHistory(),
   history: () => createWebHistory()
-};
+} as const
+
+const historyCreator = (routerMode as Record<string, () => any>)[normalizedMode] || routerMode.hash
 
 const router = createRouter({
-  history: routerMode[mode](),
+  history: historyCreator(),
   strict: false,
   scrollBehavior: () => ({ left: 0, top: 0 }),
   routes: [
